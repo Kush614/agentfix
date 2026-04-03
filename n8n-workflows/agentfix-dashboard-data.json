@@ -1,0 +1,267 @@
+{
+  "id": "1004",
+  "name": "AgentFix Dashboard Data API",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "agentfix/stats",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "stats-webhook",
+      "name": "Dashboard Stats Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "agentfix-stats"
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:treasury@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "get-treasury",
+      "name": "Treasury Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        140
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:fixer@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "get-fixer",
+      "name": "Fixer Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:escrow@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "get-escrow",
+      "name": "Escrow Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        460
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:fees@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "get-fees",
+      "name": "Fees Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        620
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine wallet balances for dashboard\nconst items = .all();\nconst parseBalance = (item) => parseFloat(item?.json?.balance || item?.json?.[0]?.balance || '0');\nconst wallets = {\n  treasury: parseBalance(items[0]),\n  fixer: parseBalance(items[1]),\n  escrow: parseBalance(items[2]),\n  fees: parseBalance(items[3]),\n};\nreturn [{ json: { wallets, transactions: [], updated_at: new Date().toISOString() } }];"
+      },
+      "id": "build-response",
+      "name": "Build Dashboard Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-stats",
+      "name": "Respond with Stats",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Dashboard Stats Request": {
+      "main": [
+        [
+          {
+            "node": "Treasury Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fixer Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Escrow Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fees Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Treasury Balance": {
+      "main": [
+        [
+          {
+            "node": "Build Dashboard Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fixer Balance": {
+      "main": [
+        [
+          {
+            "node": "Build Dashboard Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escrow Balance": {
+      "main": [
+        [
+          {
+            "node": "Build Dashboard Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fees Balance": {
+      "main": [
+        [
+          {
+            "node": "Build Dashboard Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Dashboard Response": {
+      "main": [
+        [
+          {
+            "node": "Respond with Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "agentfix"
+    },
+    {
+      "name": "dashboard"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}

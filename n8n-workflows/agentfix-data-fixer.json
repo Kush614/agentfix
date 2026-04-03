@@ -1,0 +1,287 @@
+{
+  "id": "1002",
+  "name": "AgentFix Data Fixer (Sub-Workflow)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "sub-workflow-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.product_url }}",
+        "options": {
+          "timeout": 15000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "fetch-html",
+      "name": "Fetch Raw HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Truncate HTML to fit within AI context window\nconst html = $input.first().json.data || $input.first().json.body || '';\nconst truncated = html.substring(0, 20000);\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    raw_html: truncated,\n    html_length: html.length,\n    was_truncated: html.length > 20000\n  }\n}];"
+      },
+      "id": "truncate-html",
+      "name": "Truncate HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "promptType": "define",
+        "text": "Extract product data from this merchant page HTML:\n\n{{ $json.raw_html }}\n\nReturn a JSON object with these fields:\n- product_name: string\n- price: number (in USD, no currency symbol)\n- currency: string (e.g., \"USD\")\n- availability: \"in_stock\" | \"out_of_stock\" | \"unknown\"\n- merchant: string (merchant/store name)\n- product_id: string (SKU, ASIN, or any identifier)\n- amazon_equivalent_search: string (search query to find this product on Amazon as a fallback)",
+        "options": {
+          "systemMessage": "You are a product data extraction specialist. Given raw HTML content from a merchant product page, extract the following into clean JSON. If you cannot extract the price or the product appears out of stock, set availability to the appropriate value. Always provide an amazon_equivalent_search as a fallback. Return JSON only, no explanation."
+        }
+      },
+      "id": "ai-extract",
+      "name": "AI: Extract Product Data",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "options": {
+          "temperature": 0,
+          "maxTokensToSample": 2048
+        }
+      },
+      "id": "anthropic-model",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [
+        900,
+        520
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "1",
+          "name": "Anthropic AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI extraction result\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet product;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  product = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);\n} catch (e) {\n  product = {\n    product_name: 'Unknown Product',\n    price: 0,\n    currency: 'USD',\n    availability: 'unknown',\n    merchant: 'Unknown',\n    product_id: '',\n    amazon_equivalent_search: ''\n  };\n}\n\nreturn [{\n  json: {\n    product: product,\n    extraction_success: product.price > 0,\n    availability: product.availability\n  }\n}];"
+      },
+      "id": "parse-extraction",
+      "name": "Parse Extraction Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.extraction_success }}",
+              "value2": true
+            }
+          ],
+          "string": [
+            {
+              "value1": "={{ $json.availability }}",
+              "operation": "equals",
+              "value2": "in_stock"
+            }
+          ]
+        },
+        "combineConditions": "all"
+      },
+      "id": "check-extraction",
+      "name": "Price Found & In Stock?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "promptType": "define",
+        "text": "The product \"{{ $json.product.product_name || 'unknown' }}\" was not available on the original merchant site. Find this product on Amazon instead.\n\nSearch query: {{ $json.product.amazon_equivalent_search || $json.product.product_name }}\n\nReturn JSON with:\n- amazon_url: the likely Amazon product page URL (construct from ASIN if possible)\n- asin: the Amazon ASIN\n- search_query: the search terms used",
+        "options": {
+          "systemMessage": "You are a product search specialist. Given a product description, find the most likely Amazon equivalent. Return JSON only with amazon_url, asin, and search_query fields."
+        }
+      },
+      "id": "find-amazon-alt",
+      "name": "AI: Find Amazon Alternative",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1540,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "options": {
+          "temperature": 0.2,
+          "maxTokensToSample": 1024
+        }
+      },
+      "id": "anthropic-search",
+      "name": "Anthropic (Search)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        700
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "1",
+          "name": "Anthropic AgentFix"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Raw HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Raw HTML": {
+      "main": [
+        [
+          {
+            "node": "Truncate HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Truncate HTML": {
+      "main": [
+        [
+          {
+            "node": "AI: Extract Product Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Extract Product Data": {
+      "main": [
+        [
+          {
+            "node": "Parse Extraction Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI: Extract Product Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Extraction Result": {
+      "main": [
+        [
+          {
+            "node": "Price Found & In Stock?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Price Found & In Stock?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI: Find Amazon Alternative",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic (Search)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI: Find Amazon Alternative",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "agentfix"
+    },
+    {
+      "name": "sub-workflow"
+    }
+  ],
+  "triggerCount": 0,
+  "pinData": {}
+}

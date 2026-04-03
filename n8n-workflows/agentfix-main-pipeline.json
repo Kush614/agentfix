@@ -1,0 +1,721 @@
+{
+  "id": "1001",
+  "name": "AgentFix Main Pipeline",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agentfix/purchase",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Purchase Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "agentfix-purchase"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-product-url",
+              "name": "product_url",
+              "value": "={{ $json.body.product_url }}",
+              "type": "string"
+            },
+            {
+              "id": "set-quantity",
+              "name": "quantity",
+              "value": "={{ $json.body.quantity || 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "set-max-price",
+              "name": "max_price",
+              "value": "={{ $json.body.max_price || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "set-user-email",
+              "name": "user_email",
+              "value": "={{ $json.body.user_email }}",
+              "type": "string"
+            },
+            {
+              "id": "set-agent-id",
+              "name": "agent_id",
+              "value": "={{ $json.body.agent_id || 'anonymous-agent' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-timestamp",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "parse-request",
+      "name": "Parse Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "promptType": "define",
+        "text": "Analyze this purchase request and attempt to classify it:\n\nProduct URL: {{ $json.product_url }}\nQuantity: {{ $json.quantity }}\nMax Price: ${{ $json.max_price }}\nUser Email: {{ $json.user_email }}\n\nFirst, determine if this is a direct Amazon/Shopify URL that can go straight to Crossmint World Store checkout. If yes, respond with:\n{\"action\": \"DIRECT_CHECKOUT\", \"platform\": \"amazon|shopify\", \"product_url\": \"<url>\"}\n\nIf the URL is not a standard e-commerce platform, or appears to be a merchant page that may need data extraction, respond with:\n{\"action\": \"NEEDS_FIX\", \"reason\": \"DATA_BROKEN|CHECKOUT_BLOCKED|PAYMENT_FAILED|UNKNOWN\", \"details\": \"explanation\"}",
+        "options": {
+          "systemMessage": "You are AgentFix, a middleware system that diagnoses why agentic commerce transactions fail. You analyze purchase requests and determine the best route to complete them. Always respond with valid JSON only, no explanation text."
+        }
+      },
+      "id": "classify-request",
+      "name": "Classify Request",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "options": {
+          "temperature": 0.1,
+          "maxTokensToSample": 1024
+        }
+      },
+      "id": "anthropic-classify",
+      "name": "Anthropic (Classify)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [
+        680,
+        520
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "1",
+          "name": "Anthropic AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the AI response to extract action\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet parsed;\ntry {\n  // Try to extract JSON from the response\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  parsed = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);\n} catch (e) {\n  parsed = {\n    action: 'NEEDS_FIX',\n    reason: 'UNKNOWN',\n    details: 'Could not parse AI classification: ' + aiResponse\n  };\n}\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    classification: parsed,\n    action: parsed.action || 'NEEDS_FIX',\n    failure_type: parsed.reason || 'UNKNOWN'\n  }\n}];"
+      },
+      "id": "parse-classification",
+      "name": "Parse Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "outputKey": "DIRECT_CHECKOUT",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "DIRECT_CHECKOUT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "DATA_BROKEN",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.failure_type }}",
+                    "rightValue": "DATA_BROKEN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "CHECKOUT_BLOCKED",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.failure_type }}",
+                    "rightValue": "CHECKOUT_BLOCKED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "PAYMENT_FAILED",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.failure_type }}",
+                    "rightValue": "PAYMENT_FAILED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "fallbackOutput": "UNKNOWN"
+        }
+      },
+      "id": "route-failure",
+      "name": "Route by Failure Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "checkout",
+        "operation": "createOrder",
+        "platform": "amazon",
+        "productIdentifier": "={{ $json.product_url || $json.classification.product_url }}",
+        "recipientEmail": "={{ $json.user_email }}",
+        "recipientName": "AgentFix Customer",
+        "addressLine1": "123 Demo St",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US",
+        "paymentMethod": "solana",
+        "paymentCurrency": "usdc"
+      },
+      "id": "crossmint-create-order",
+      "name": "Crossmint: Create Order",
+      "type": "n8n-nodes-crossmint.crossmintCheckout",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        100
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.product_url }}",
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          }
+        }
+      },
+      "id": "fetch-merchant-page",
+      "name": "Fetch Merchant Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "promptType": "define",
+        "text": "Extract product data from this merchant page HTML:\n\n{{ $json.data.substring(0, 15000) }}\n\nReturn JSON with: product_name, price (number), currency, availability (in_stock/out_of_stock), merchant, product_id, amazon_equivalent_search (a search query to find this product on Amazon).",
+        "options": {
+          "systemMessage": "You are a product data extraction specialist. Given raw HTML content from a merchant product page, extract structured product data into clean JSON. Return JSON only, no explanation. If you cannot extract the price, set price to 0 and availability to 'unknown'."
+        }
+      },
+      "id": "extract-product-data",
+      "name": "AI: Extract Product Data",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "options": {
+          "temperature": 0,
+          "maxTokensToSample": 2048
+        }
+      },
+      "id": "anthropic-extract",
+      "name": "Anthropic (Extract)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        520
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "1",
+          "name": "Anthropic AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse extracted product data and prepare for Crossmint checkout\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet product;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  product = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);\n} catch (e) {\n  product = { product_name: 'Unknown', price: 0, availability: 'unknown' };\n}\n\n// Calculate fee (2%)\nconst price = parseFloat(product.price) || 0;\nconst fee = Math.round(price * 0.02 * 100) / 100;\nconst total = Math.round((price + fee) * 100) / 100;\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    product: product,\n    price: price,\n    fee: fee,\n    total: total,\n    fix_type: 'DATA_FIX',\n    fix_details: 'Extracted structured data from unstructured merchant page',\n    amazon_search: product.amazon_equivalent_search || product.product_name\n  }\n}];"
+      },
+      "id": "prepare-checkout-data",
+      "name": "Prepare Checkout Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "checkout",
+        "operation": "createOrder",
+        "platform": "amazon",
+        "productIdentifier": "={{ $json.amazon_search }}",
+        "recipientEmail": "={{ $json.user_email }}",
+        "recipientName": "AgentFix Customer",
+        "addressLine1": "123 Demo St",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US",
+        "paymentMethod": "solana",
+        "paymentCurrency": "usdc"
+      },
+      "id": "crossmint-create-order-fixed",
+      "name": "Crossmint: Create Order (Fixed)",
+      "type": "n8n-nodes-crossmint.crossmintCheckout",
+      "typeVersion": 1,
+      "position": [
+        2020,
+        300
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "checkout",
+        "operation": "createOrder",
+        "platform": "amazon",
+        "productIdentifier": "={{ $json.product_url }}",
+        "recipientEmail": "={{ $json.user_email }}",
+        "recipientName": "AgentFix Customer",
+        "addressLine1": "123 Demo St",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US",
+        "paymentMethod": "solana",
+        "paymentCurrency": "usdc"
+      },
+      "id": "crossmint-checkout-reroute",
+      "name": "Crossmint: Reroute to World Store",
+      "type": "n8n-nodes-crossmint.crossmintCheckout",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        500
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "createTransfer",
+        "blockchainType": "solana",
+        "originWallet": "email:fixer@agentfix.demo",
+        "recipientWallet": "email:escrow@agentfix.demo",
+        "tokenChain": "solana-devnet",
+        "tokenName": "usdc",
+        "amount": "={{ $json.total || $json.price || '0' }}"
+      },
+      "id": "crossmint-transfer-escrow",
+      "name": "Crossmint: Transfer to Escrow",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        300
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "createTransfer",
+        "blockchainType": "solana",
+        "originWallet": "email:escrow@agentfix.demo",
+        "recipientWallet": "email:fees@agentfix.demo",
+        "tokenChain": "solana-devnet",
+        "tokenName": "usdc",
+        "amount": "={{ $json.fee || '0' }}"
+      },
+      "id": "crossmint-collect-fee",
+      "name": "Crossmint: Collect Fee",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        2500,
+        300
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  status: 'success',\n  message: 'AgentFix completed transaction',\n  transaction: {\n    product: $json.product?.product_name || 'Product',\n    amount_usdc: $json.total || $json.price || 0,\n    fee_usdc: $json.fee || 0,\n    fix_applied: $json.fix_type || 'DIRECT_CHECKOUT',\n    fix_details: $json.fix_details || 'No fix needed',\n    tx_hash: $json.txHash || $json.transactionId || 'pending',\n    timestamp: new Date().toISOString()\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2940,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  status: 'escalated',\n  message: 'Transaction requires human review',\n  failure_type: $json.failure_type || 'UNKNOWN',\n  details: $json.classification?.details || 'Could not auto-fix this transaction'\n}) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "respond-escalated",
+      "name": "Respond Escalated",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1580,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Payment fix: check fixer wallet balance and handle payment rerouting\nconst data = $input.first().json;\n\nreturn [{\n  json: {\n    ...data,\n    fix_type: 'PAYMENT_FIX',\n    fix_details: 'Rerouted payment through USDC stablecoin rails via Crossmint',\n    payment_method: 'usdc',\n    payment_chain: 'solana-devnet'\n  }\n}];"
+      },
+      "id": "payment-fix",
+      "name": "Payment Fix: USDC Reroute",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        920
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Checkout blocked fix: reroute through Crossmint World Store\nconst data = $input.first().json;\n\nreturn [{\n  json: {\n    ...data,\n    fix_type: 'CHECKOUT_FIX',\n    fix_details: 'Bypassed anti-bot checkout via Crossmint World Store reroute'\n  }\n}];"
+      },
+      "id": "checkout-fix-prep",
+      "name": "Checkout Fix: Prepare Reroute",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Purchase Request": {
+      "main": [
+        [
+          {
+            "node": "Parse Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Request": {
+      "main": [
+        [
+          {
+            "node": "Classify Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Request": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic (Classify)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Request",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Route by Failure Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Failure Type": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Create Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Merchant Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Checkout Fix: Prepare Reroute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Payment Fix: USDC Reroute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Escalated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Create Order": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Transfer to Escrow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Merchant Page": {
+      "main": [
+        [
+          {
+            "node": "AI: Extract Product Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Extract Product Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare Checkout Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic (Extract)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI: Extract Product Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Checkout Data": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Create Order (Fixed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Create Order (Fixed)": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Transfer to Escrow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checkout Fix: Prepare Reroute": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Reroute to World Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Reroute to World Store": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Transfer to Escrow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Fix: USDC Reroute": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Create Order (Fixed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Transfer to Escrow": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Collect Fee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Collect Fee": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "agentfix"
+    },
+    {
+      "name": "crossmint"
+    },
+    {
+      "name": "hackathon"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}

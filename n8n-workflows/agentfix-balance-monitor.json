@@ -1,0 +1,293 @@
+{
+  "id": "1003",
+  "name": "AgentFix Balance Monitor",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:treasury@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "balance-treasury",
+      "name": "Crossmint: Treasury Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        140
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:fixer@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "balance-fixer",
+      "name": "Crossmint: Fixer Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "getBalance",
+        "wallet": "email:escrow@agentfix.demo",
+        "chainType": "solana",
+        "chains": "solana-devnet",
+        "tokens": "usdc"
+      },
+      "id": "balance-escrow",
+      "name": "Crossmint: Escrow Balance",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        480,
+        460
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all balance results\nconst items = $input.all();\n\nconst treasuryBal = parseFloat(items[0]?.json?.balance || items[0]?.json?.[0]?.balance || '0');\nconst fixerBal = parseFloat(items[1]?.json?.balance || items[1]?.json?.[0]?.balance || '0');\nconst escrowBal = parseFloat(items[2]?.json?.balance || items[2]?.json?.[0]?.balance || '0');\n\nreturn [{\n  json: {\n    treasury_balance: treasuryBal,\n    fixer_balance: fixerBal,\n    escrow_balance: escrowBal,\n    fixer_needs_topup: fixerBal < 10,\n    escrow_warning: escrowBal > 100,\n    checked_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "merge-balances",
+      "name": "Merge Balances",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.fixer_needs_topup }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-fixer-low",
+      "name": "Fixer < $10?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "wallet",
+        "operation": "createTransfer",
+        "blockchainType": "solana",
+        "originWallet": "email:treasury@agentfix.demo",
+        "recipientWallet": "email:fixer@agentfix.demo",
+        "tokenChain": "solana-devnet",
+        "tokenName": "usdc",
+        "amount": "50"
+      },
+      "id": "topup-fixer",
+      "name": "Crossmint: Top-up Fixer ($50)",
+      "type": "n8n-nodes-crossmint.crossmintWallets",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        100
+      ],
+      "credentials": {
+        "crossmintApi": {
+          "id": "2",
+          "name": "Crossmint AgentFix"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.escrow_warning }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-escrow-high",
+      "name": "Escrow > $100?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        440
+      ]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Treasury Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crossmint: Fixer Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crossmint: Escrow Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Treasury Balance": {
+      "main": [
+        [
+          {
+            "node": "Merge Balances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Fixer Balance": {
+      "main": [
+        [
+          {
+            "node": "Merge Balances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crossmint: Escrow Balance": {
+      "main": [
+        [
+          {
+            "node": "Merge Balances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Balances": {
+      "main": [
+        [
+          {
+            "node": "Fixer < $10?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Escrow > $100?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fixer < $10?": {
+      "main": [
+        [
+          {
+            "node": "Crossmint: Top-up Fixer ($50)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Crossmint: Top-up Fixer ($50)": {
+      "main": [
+        []
+      ]
+    },
+    "Escrow > $100?": {
+      "main": [
+        [
+          {
+            "node": "Slack: Escrow Warning",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "agentfix"
+    },
+    {
+      "name": "monitoring"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
