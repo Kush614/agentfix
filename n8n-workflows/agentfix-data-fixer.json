@@ -177,6 +177,19 @@
           "name": "Anthropic AgentFix"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return the successfully extracted product data\nconst data = $input.first().json;\nreturn [{\n  json: {\n    product: data.product,\n    extraction_success: true,\n    availability: data.availability,\n    source: 'original_merchant'\n  }\n}];"
+      },
+      "id": "return-extracted-data",
+      "name": "Return Extracted Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        200
+      ]
     }
   ],
   "connections": {
@@ -248,7 +261,13 @@
     },
     "Price Found & In Stock?": {
       "main": [
-        [],
+        [
+          {
+            "node": "Return Extracted Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "AI: Find Amazon Alternative",
