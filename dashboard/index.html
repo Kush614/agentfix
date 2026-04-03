@@ -684,7 +684,10 @@
     // === MAIN APP ===
     function App() {
       const [wallets, setWallets] = useState({ treasury: 0, fixer: 0, escrow: 0, fees: 0 });
-      const [transactions, setTransactions] = useState([]);
+      const savedTx = React.useMemo(() => {
+        try { return JSON.parse(localStorage.getItem('finfix_transactions') || '[]'); } catch { return []; }
+      }, []);
+      const [transactions, setTransactions] = useState(savedTx);
       const [isLive, setIsLive] = useState(false);
       const [lastUpdate, setLastUpdate] = useState(null);
       const [showModal, setShowModal] = useState(false);
@@ -700,6 +703,13 @@
         return () => clearInterval(iv);
       }, []);
 
+      // Persist transactions to localStorage
+      useEffect(() => {
+        if (transactions.length > 0) {
+          localStorage.setItem('finfix_transactions', JSON.stringify(transactions));
+        }
+      }, [transactions]);
+
       // Fetch stats
       const fetchStats = useCallback(async () => {
         try {
@@ -707,7 +717,14 @@
           if (res.ok) {
             const data = await res.json();
             if (data.wallets) setWallets(data.wallets);
-            if (data.transactions) setTransactions(data.transactions);
+            // Only merge server transactions if they exist (don't overwrite local with empty)
+            if (data.transactions && data.transactions.length > 0) {
+              setTransactions(prev => {
+                const existingIds = new Set(prev.map(t => t.id));
+                const newTx = data.transactions.filter(t => !existingIds.has(t.id));
+                return newTx.length > 0 ? [...prev, ...newTx] : prev;
+              });
+            }
             setIsLive(true);
           } else setIsLive(false);
         } catch { setIsLive(false); }

@@ -516,6 +516,19 @@
     },
     {
       "parameters": {
+        "jsCode": "// Format success response for dashboard\nconst data = $input.first().json;\nreturn [{\n  json: {\n    status: 'success',\n    message: 'FinFix completed transaction',\n    transaction: {\n      product: data.product?.product_name || data.product_name || 'Product',\n      amount_usdc: data.total || data.price || 0,\n      fee_usdc: data.fee || 0,\n      fix_applied: data.fix_type || 'DIRECT_CHECKOUT',\n      fix_details: data.fix_details || 'No fix needed',\n      tx_hash: data.txHash || data.transactionId || 'pending',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "format-success",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "respondWith": "allIncomingItems",
         "options": {}
       },
@@ -526,6 +539,19 @@
       "position": [
         2940,
         300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format escalated response for dashboard\nconst data = $input.first().json;\nreturn [{\n  json: {\n    status: 'escalated',\n    message: 'Transaction requires human review',\n    failure_type: data.failure_type || 'UNKNOWN',\n    details: data.classification?.details || 'Could not auto-fix this transaction'\n  }\n}];"
+      },
+      "id": "format-escalated",
+      "name": "Format Escalated Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        720
       ]
     },
     {
@@ -657,7 +683,7 @@
         ],
         [
           {
-            "node": "Respond Escalated",
+            "node": "Format Escalated Response",
             "type": "main",
             "index": 0
           }
@@ -778,7 +804,29 @@
       "main": [
         [
           {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success Response": {
+      "main": [
+        [
+          {
             "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Escalated Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Escalated",
             "type": "main",
             "index": 0
           }
