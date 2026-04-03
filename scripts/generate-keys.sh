@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# generate-keys.sh — Generates Solana keypairs for AgentFix agent wallets
+# generate-keys.sh — Generates Solana keypairs for FinFix agent wallets
 # Requires: Node.js 18+, npm
 
 set -euo pipefail
@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
 
-echo "=== AgentFix: Solana Keypair Generator ==="
+echo "=== FinFix: Solana Keypair Generator ==="
 echo ""
 
 # Check if .env exists, create from example if not
@@ -55,7 +55,7 @@ function toBase58(buffer) {
 
 let envContent = fs.readFileSync(envFile, 'utf8');
 
-console.log('Generating Solana keypairs for AgentFix wallets...');
+console.log('Generating Solana keypairs for FinFix wallets...');
 console.log('');
 
 for (const wallet of wallets) {

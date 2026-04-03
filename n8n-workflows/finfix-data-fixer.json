@@ -1,6 +1,6 @@
 {
   "id": "1002",
-  "name": "AgentFix Data Fixer (Sub-Workflow)",
+  "name": "FinFix Data Fixer (Sub-Workflow)",
   "nodes": [
     {
       "parameters": {},
@@ -92,7 +92,7 @@
       "credentials": {
         "anthropicApi": {
           "id": "1",
-          "name": "Anthropic AgentFix"
+          "name": "Anthropic FinFix"
         }
       }
     },
@@ -174,7 +174,7 @@
       "credentials": {
         "anthropicApi": {
           "id": "1",
-          "name": "Anthropic AgentFix"
+          "name": "Anthropic FinFix"
         }
       }
     },
@@ -295,7 +295,7 @@
   "staticData": null,
   "tags": [
     {
-      "name": "agentfix"
+      "name": "finfix"
     },
     {
       "name": "sub-workflow"

@@ -50,14 +50,14 @@ function request(urlStr) {
 }
 
 async function main() {
-  console.log('=== AgentFix: Wallet Balances ===');
+  console.log('=== FinFix: Wallet Balances ===');
   console.log('');
 
   const checks = [
-    { name: 'Treasury', email: 'treasury@agentfix.demo' },
-    { name: 'Fixer Agent', email: 'fixer@agentfix.demo' },
-    { name: 'Escrow', email: 'escrow@agentfix.demo' },
-    { name: 'Fee Collector', email: 'fees@agentfix.demo' },
+    { name: 'Treasury', email: 'treasury@finfix.demo' },
+    { name: 'Fixer Agent', email: 'fixer@finfix.demo' },
+    { name: 'Escrow', email: 'escrow@finfix.demo' },
+    { name: 'Fee Collector', email: 'fees@finfix.demo' },
   ];
 
   for (const w of checks) {

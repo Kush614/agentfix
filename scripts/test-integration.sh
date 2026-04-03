@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# test-integration.sh — Sends 5 test purchase requests to AgentFix webhook
+# test-integration.sh — Sends 5 test purchase requests to FinFix webhook
 # Requires: curl, jq
 
 set -euo pipefail
 
-WEBHOOK_URL="${N8N_WEBHOOK_BASE_URL:-http://localhost:5678}/webhook/agentfix/purchase"
+WEBHOOK_URL="${N8N_WEBHOOK_BASE_URL:-http://localhost:5678}/webhook/finfix/purchase"
 
-echo "=== AgentFix Integration Test ==="
+echo "=== FinFix Integration Test ==="
 echo "Webhook: $WEBHOOK_URL"
 echo ""
 
@@ -93,5 +93,5 @@ send_request 5 \
 
 echo "=== Integration Tests Complete ==="
 echo ""
-echo "Check the AgentFix dashboard for results: file://$(cd "$(dirname "$0")/../dashboard" && pwd)/index.html"
+echo "Check the FinFix dashboard for results: file://$(cd "$(dirname "$0")/../dashboard" && pwd)/index.html"
 echo "Check Google Sheets audit trail for logged transactions."

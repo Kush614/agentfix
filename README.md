@@ -1,6 +1,6 @@
-# AgentFix — Self-Healing Middleware for Agentic Commerce
+# FinFix — Self-Healing Middleware for Agentic Commerce
 
-AgentFix is an n8n-orchestrated middleware that sits between AI shopping/finance agents and broken merchant infrastructure. When an agentic transaction fails, AgentFix detects what broke, fixes it autonomously, settles via USDC on Crossmint, and logs a full audit trail.
+FinFix is an n8n-orchestrated middleware that sits between AI shopping/finance agents and broken merchant infrastructure. When an agentic transaction fails, FinFix detects what broke, fixes it autonomously, settles via USDC on Crossmint, and logs a full audit trail.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ AgentFix is an n8n-orchestrated middleware that sits between AI shopping/finance
 
 ```bash
 # Clone and enter
-cd agentfix
+cd finfix
 
 # Copy env and fill in your keys
 cp .env.example .env
@@ -43,9 +43,9 @@ npm install && npm run build
 
 Import these JSON files into your n8n instance:
 
-1. `n8n-workflows/agentfix-main-pipeline.json` — Main purchase pipeline
-2. `n8n-workflows/agentfix-data-fixer.json` — Product data extraction sub-workflow
-3. `n8n-workflows/agentfix-balance-monitor.json` — Cron wallet balance monitor
+1. `n8n-workflows/finfix-main-pipeline.json` — Main purchase pipeline
+2. `n8n-workflows/finfix-data-fixer.json` — Product data extraction sub-workflow
+3. `n8n-workflows/finfix-balance-monitor.json` — Cron wallet balance monitor
 
 ### 5. Dashboard
 
@@ -76,7 +76,7 @@ User/AI Agent → n8n Webhook → Failure Classifier (AI) → Fix Router
 | treasury | Master fund pool |
 | fixer-agent | Pays for purchases on behalf of users |
 | escrow | Holds funds during order fulfillment |
-| fee-collector | Collects 2% AgentFix service fee |
+| fee-collector | Collects 2% FinFix service fee |
 
 ## Tech Stack
 

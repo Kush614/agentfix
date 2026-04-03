@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup-wallets.sh — Creates 4 AgentFix wallets on Crossmint via Node.js
+# setup-wallets.sh — Creates 4 FinFix wallets on Crossmint via Node.js
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -33,10 +33,10 @@ if (!API_KEY || API_KEY.includes('XXXX')) {
 }
 
 const wallets = [
-  { name: 'TREASURY', email: 'treasury@agentfix.demo', signer: env.TREASURY_WALLET_ADDRESS },
-  { name: 'FIXER', email: 'fixer@agentfix.demo', signer: env.FIXER_WALLET_ADDRESS },
-  { name: 'ESCROW', email: 'escrow@agentfix.demo', signer: env.ESCROW_WALLET_ADDRESS },
-  { name: 'FEE_COLLECTOR', email: 'fees@agentfix.demo', signer: env.FEE_COLLECTOR_WALLET_ADDRESS },
+  { name: 'TREASURY', email: 'treasury@finfix.demo', signer: env.TREASURY_WALLET_ADDRESS },
+  { name: 'FIXER', email: 'fixer@finfix.demo', signer: env.FIXER_WALLET_ADDRESS },
+  { name: 'ESCROW', email: 'escrow@finfix.demo', signer: env.ESCROW_WALLET_ADDRESS },
+  { name: 'FEE_COLLECTOR', email: 'fees@finfix.demo', signer: env.FEE_COLLECTOR_WALLET_ADDRESS },
 ];
 
 function request(method, urlPath, body) {
@@ -70,7 +70,7 @@ function request(method, urlPath, body) {
 }
 
 async function main() {
-  console.log('=== AgentFix: Wallet Setup ===');
+  console.log('=== FinFix: Wallet Setup ===');
   console.log('API: ' + BASE_URL);
   console.log('');
 
