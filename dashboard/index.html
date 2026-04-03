@@ -715,7 +715,9 @@
         try {
           const res = await fetch(STATS_URL);
           if (res.ok) {
-            const data = await res.json();
+            const text = await res.text();
+            if (!text) { setIsLive(false); setLastUpdate(new Date()); return; }
+            const data = JSON.parse(text);
             if (data.wallets) setWallets(data.wallets);
             // Only merge server transactions if they exist (don't overwrite local with empty)
             if (data.transactions && data.transactions.length > 0) {
@@ -748,12 +750,18 @@
           setTimeout(() => { setActiveNode('classify'); SFX.nodeActivate(700); }, 1200);
           setTimeout(() => { setActiveNode('router'); SFX.nodeActivate(600); }, 1800);
 
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 60000);
           const res = await fetch(PURCHASE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(form),
+            signal: controller.signal,
           });
-          const data = await res.json();
+          clearTimeout(timeout);
+          const text = await res.text();
+          const data = text ? JSON.parse(text) : { status: 'error', message: 'Empty response from workflow' };
+          if (!res.ok && !data.status) { data.status = 'error'; data.message = data.message || `HTTP ${res.status}`; }
           setLastResult(data);
 
           if (data.transaction) {
