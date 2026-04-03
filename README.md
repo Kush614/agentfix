@@ -7,7 +7,7 @@ When AI agents try to shop online, **68% of transactions fail** — broken produ
 FinFix sits between AI shopping agents and broken merchant infrastructure. When a transaction fails, it:
 
 1. **Detects** the failure at the merchant endpoint
-2. **Classifies** the failure type using Claude AI in real-time
+2. **Classifies** the failure type using MiniMax + Claude AI in real-time
 3. **Fixes** it autonomously (scrape data, bypass checkout, reroute payment)
 4. **Settles** via USDC on Solana through Crossmint wallets — instant, borderless
 5. **Logs** a full audit trail with on-chain transaction hashes
@@ -24,23 +24,62 @@ AI agents are getting good at browsing and shopping, but merchant infrastructure
 
 There's no middleware layer between AI agents and merchants. FinFix fills that gap.
 
-## How It Works
+## Architecture
 
 ```
-AI Agent → n8n Webhook → Claude AI Classifier → Fix Router
-                                                    ├─ DATA FIX: scrape & extract structured product data
-                                                    ├─ CHECKOUT FIX: reroute via Crossmint World Store
-                                                    ├─ PAYMENT FIX: settle via USDC stablecoin rails
-                                                    └─ ESCALATE: flag for human review
-                                                 → Crossmint (wallets + checkout + settlement)
-                                                 → Audit Trail
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              FinFix Pipeline                                        │
+│                                                                                     │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────┐    ┌─────────────┐               │
+│  │ AI Agent │───▶│ n8n      │───▶│ MiniMax +    │───▶│ Fix Router  │               │
+│  │          │    │ Webhook  │    │ Claude AI    │    │             │               │
+│  │ purchase │    │ POST     │    │ Classifier   │    │ classify &  │               │
+│  │ request  │    │ /finfix  │    │              │    │ route       │               │
+│  └──────────┘    └──────────┘    └──────────────┘    └──────┬──────┘               │
+│                                                             │                       │
+│                        ┌────────────────┬──────────────┬────┴────────┐              │
+│                        ▼                ▼              ▼             ▼              │
+│                  ┌───────────┐   ┌────────────┐ ┌──────────┐  ┌──────────┐         │
+│                  │ DATA FIX  │   │ CHECKOUT   │ │ PAYMENT  │  │ ESCALATE │         │
+│                  │           │   │ FIX        │ │ FIX      │  │          │         │
+│                  │ scrape &  │   │ Crossmint  │ │ USDC     │  │ human    │         │
+│                  │ extract   │   │ World Store│ │ rails    │  │ review   │         │
+│                  └─────┬─────┘   └─────┬──────┘ └────┬─────┘  └──────────┘         │
+│                        │               │             │                              │
+│                        └───────────────┴──────┬──────┘                              │
+│                                               ▼                                     │
+│                                  ┌─────────────────────┐                            │
+│                                  │   Crossmint          │                            │
+│                                  │   Wallets API        │                            │
+│                                  │                      │                            │
+│                                  │  Treasury → Fixer    │                            │
+│                                  │  Fixer → Escrow      │                            │
+│                                  │  Escrow → Fee Pool   │                            │
+│                                  │                      │                            │
+│                                  │  USDC on Solana      │                            │
+│                                  └──────────┬───────────┘                            │
+│                                             ▼                                       │
+│                                  ┌─────────────────────┐                            │
+│                                  │   Settlement         │                            │
+│                                  │   + Audit Trail      │                            │
+│                                  └─────────────────────┘                            │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Pipeline Flow
+
+1. **AI Agent** sends a purchase request to the n8n webhook
+2. **n8n** orchestrates the entire pipeline as a workflow
+3. **MiniMax + Claude AI** classify the failure type in real-time
+4. **Fix Router** dispatches to the correct autonomous fix
+5. **Crossmint** handles wallet operations, checkout, and USDC settlement on Solana
+6. **Audit trail** logs every transaction with on-chain hashes
 
 ### Three Failure Types, Three Autonomous Fixes
 
 | Failure | What Happens | How FinFix Fixes It |
 |---|---|---|
-| **Broken Product Data** | Merchant page has no structured data | Scrapes HTML, Claude extracts product info, finds Amazon equivalent |
+| **Broken Product Data** | Merchant page has no structured data | Scrapes HTML, MiniMax + Claude extract product info, finds Amazon equivalent |
 | **Blocked Checkout** | Anti-bot walls block the agent | Reroutes through Crossmint World Store API |
 | **Payment Rejected** | Card processor rejects programmatic payment | Settles via USDC on Solana — no chargebacks, instant finality |
 
@@ -57,12 +96,14 @@ FinFix uses 4 Crossmint smart wallets on Solana for the payment flow:
 
 ## Tech Stack
 
-- **Orchestration:** [n8n](https://n8n.io/) (self-hosted workflow automation)
-- **AI Engine:** Anthropic Claude Sonnet 4.6 via n8n AI Agent nodes
-- **Payments:** [Crossmint](https://crossmint.com/) Wallets API + World Store Checkout
-- **Settlement:** USDC on Solana (devnet)
-- **Frontend:** React + Three.js + Tailwind (Lovable-generated) + Cyberpunk HUD Command Center
-- **Dashboard:** Real-time pipeline visualization with transaction monitoring
+| Layer | Technology |
+|---|---|
+| **Orchestration** | [n8n](https://n8n.io/) — self-hosted workflow automation, connects every piece |
+| **AI Classification** | [MiniMax](https://www.minimax.io/) + Anthropic Claude Sonnet 4.6 — failure detection and intelligent routing |
+| **Payments & Wallets** | [Crossmint](https://crossmint.com/) — Wallets API, World Store Checkout, USDC settlement |
+| **Blockchain** | Solana (devnet) — USDC stablecoin transfers with on-chain finality |
+| **Frontend** | React + Three.js + Tailwind + Cyberpunk HUD Command Center |
+| **Dashboard** | Real-time pipeline visualization with transaction monitoring |
 
 ## Quick Start
 
@@ -153,7 +194,7 @@ curl -X POST http://localhost:5678/webhook/finfix/purchase \
 
 ## Built For
 
-HAC Vibe Coding Hackathon 2026 — Powered by [Crossmint](https://crossmint.com/) & [n8n](https://n8n.io/)
+HAC Vibe Coding Hackathon 2026 — Powered by [Crossmint](https://crossmint.com/), [n8n](https://n8n.io/) & [MiniMax](https://www.minimax.io/)
 
 ## License
 
