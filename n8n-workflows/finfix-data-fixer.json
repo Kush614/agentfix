@@ -75,7 +75,7 @@
     },
     {
       "parameters": {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4-20250514",
         "options": {
           "temperature": 0,
           "maxTokensToSample": 2048
@@ -157,7 +157,7 @@
     },
     {
       "parameters": {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4-20250514",
         "options": {
           "temperature": 0.2,
           "maxTokensToSample": 1024

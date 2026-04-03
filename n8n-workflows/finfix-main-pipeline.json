@@ -7,7 +7,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "finfix/purchase",
-        "responseMode": "responseNode",
+        "responseMode": "lastNode",
         "options": {
           "responseHeaders": {
             "entries": [
@@ -102,7 +102,7 @@
     },
     {
       "parameters": {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4-20250514",
         "options": {
           "temperature": 0.1,
           "maxTokensToSample": 1024
@@ -125,7 +125,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the AI response to extract action\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet parsed;\ntry {\n  // Try to extract JSON from the response\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  parsed = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);\n} catch (e) {\n  parsed = {\n    action: 'NEEDS_FIX',\n    reason: 'UNKNOWN',\n    details: 'Could not parse AI classification: ' + aiResponse\n  };\n}\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    classification: parsed,\n    action: parsed.action || 'NEEDS_FIX',\n    failure_type: parsed.reason || 'UNKNOWN'\n  }\n}];"
+        "jsCode": "// Parse the AI response and carry forward request data\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\nconst requestData = $('Parse Request').first().json;\n\nlet parsed;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  parsed = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);\n} catch (e) {\n  parsed = {\n    action: 'NEEDS_FIX',\n    reason: 'UNKNOWN',\n    details: 'Could not parse AI classification: ' + aiResponse\n  };\n}\n\nreturn [{\n  json: {\n    ...requestData,\n    classification: parsed,\n    action: parsed.action || 'NEEDS_FIX',\n    failure_type: parsed.reason || 'UNKNOWN'\n  }\n}];"
       },
       "id": "parse-classification",
       "name": "Parse Classification",
@@ -152,7 +152,12 @@
                     }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                }
               },
               "renameOutput": true,
               "outputKey": "DIRECT_CHECKOUT"
@@ -169,7 +174,12 @@
                     }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                }
               },
               "renameOutput": true,
               "outputKey": "DATA_BROKEN"
@@ -186,7 +196,12 @@
                     }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                }
               },
               "renameOutput": true,
               "outputKey": "CHECKOUT_BLOCKED"
@@ -203,7 +218,12 @@
                     }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                }
               },
               "renameOutput": true,
               "outputKey": "PAYMENT_FAILED"
@@ -264,7 +284,8 @@
       "position": [
         1360,
         100
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -286,7 +307,8 @@
       "position": [
         1360,
         300
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -308,7 +330,7 @@
     },
     {
       "parameters": {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4-20250514",
         "options": {
           "temperature": 0,
           "maxTokensToSample": 2048
@@ -383,7 +405,8 @@
       "position": [
         2020,
         300
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -426,7 +449,8 @@
       "position": [
         1360,
         500
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -469,7 +493,8 @@
       "position": [
         2280,
         300
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -512,11 +537,12 @@
       "position": [
         2500,
         300
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "// Format success response for dashboard\nconst data = $input.first().json;\nreturn [{\n  json: {\n    status: 'success',\n    message: 'FinFix completed transaction',\n    transaction: {\n      product: data.product?.product_name || data.product_name || 'Product',\n      amount_usdc: data.total || data.price || 0,\n      fee_usdc: data.fee || 0,\n      fix_applied: data.fix_type || 'DIRECT_CHECKOUT',\n      fix_details: data.fix_details || 'No fix needed',\n      tx_hash: data.txHash || data.transactionId || 'pending',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+        "jsCode": "// Format success response for dashboard\nconst upstream = $('Parse Request').first().json;\nconst data = $input.first().json;\nreturn [{\n  json: {\n    status: 'success',\n    message: 'FinFix completed transaction',\n    transaction: {\n      product: upstream.product_url || 'Product',\n      amount_usdc: data.total || data.price || 0,\n      fee_usdc: data.fee || 0,\n      fix_applied: data.fix_type || 'DIRECT_CHECKOUT',\n      fix_details: data.fix_details || 'No fix needed',\n      tx_hash: data.txHash || data.transactionId || data.id || 'pending',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
       },
       "id": "format-success",
       "name": "Format Success Response",
@@ -524,20 +550,6 @@
       "typeVersion": 2,
       "position": [
         2720,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "respond-success",
-      "name": "Respond Success",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        2940,
         300
       ]
     },
@@ -551,20 +563,6 @@
       "typeVersion": 2,
       "position": [
         1400,
-        720
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "respond-escalated",
-      "name": "Respond Escalated",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        1580,
         720
       ]
     },
@@ -805,28 +803,6 @@
         [
           {
             "node": "Format Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Success Response": {
-      "main": [
-        [
-          {
-            "node": "Respond Success",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Escalated Response": {
-      "main": [
-        [
-          {
-            "node": "Respond Escalated",
             "type": "main",
             "index": 0
           }
