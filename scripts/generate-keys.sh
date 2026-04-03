@@ -59,11 +59,16 @@ console.log('Generating Solana keypairs for FinFix wallets...');
 console.log('');
 
 for (const wallet of wallets) {
-  const seed = crypto.randomBytes(32);
-  const keypairBytes = Buffer.concat([seed, crypto.randomBytes(32)]);
+  // Generate Ed25519 keypair — public key is derived from the seed
+  const keyPair = crypto.generateKeyPairSync('ed25519');
+  const privDer = keyPair.privateKey.export({ type: 'pkcs8', format: 'der' });
+  const pubDer = keyPair.publicKey.export({ type: 'spki', format: 'der' });
+  // Ed25519 PKCS8 DER: last 32 bytes are the seed, SPKI DER: last 32 bytes are the pubkey
+  const seed = privDer.slice(privDer.length - 32);
+  const pubKeyBytes = pubDer.slice(pubDer.length - 32);
+  const keypairBytes = Buffer.concat([seed, pubKeyBytes]);
   const privateKeyB58 = toBase58(keypairBytes);
 
-  const pubKeyBytes = crypto.randomBytes(32);
   const addressB58 = toBase58(pubKeyBytes);
 
   const pkKey = wallet + '_PRIVATE_KEY';

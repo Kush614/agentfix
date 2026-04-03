@@ -31,103 +31,91 @@
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:treasury@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:treasury@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "get-treasury",
       "name": "Treasury Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         140
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:fixer@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:fixer@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "get-fixer",
       "name": "Fixer Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         300
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:escrow@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:escrow@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "get-escrow",
       "name": "Escrow Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         460
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:fees@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:fees@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "get-fees",
       "name": "Fees Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         620
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Combine wallet balances for dashboard\nconst items = .all();\nconst parseBalance = (item) => parseFloat(item?.json?.balance || item?.json?.[0]?.balance || '0');\nconst wallets = {\n  treasury: parseBalance(items[0]),\n  fixer: parseBalance(items[1]),\n  escrow: parseBalance(items[2]),\n  fees: parseBalance(items[3]),\n};\nreturn [{ json: { wallets, transactions: [], updated_at: new Date().toISOString() } }];"
+        "jsCode": "// Combine wallet balances for dashboard\nconst items = $input.all();\nconst parseBalance = (item) => parseFloat(item?.json?.balance || item?.json?.[0]?.balance || '0');\nconst wallets = {\n  treasury: parseBalance(items[0]),\n  fixer: parseBalance(items[1]),\n  escrow: parseBalance(items[2]),\n  fees: parseBalance(items[3]),\n};\nreturn [{ json: { wallets, transactions: [], updated_at: new Date().toISOString() } }];"
       },
       "id": "build-response",
       "name": "Build Dashboard Response",

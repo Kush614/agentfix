@@ -3,370 +3,998 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FinFix Dashboard</title>
+  <title>FinFix — Agentic Commerce Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            surface: '#0f1117',
-            card: '#1a1d27',
-            border: '#2a2d3a',
-            accent: '#6366f1',
-            success: '#22c55e',
-            warning: '#f59e0b',
-            danger: '#ef4444',
+            void: '#020408',
+            panel: '#060a12',
+            'panel-2': '#0a1020',
+            edge: '#0f1a2e',
+            neon: '#00f0ff',
+            'neon-2': '#00ff88',
+            plasma: '#ff0066',
+            solar: '#ff6600',
+            volt: '#ccff00',
+            holo: '#7b61ff',
           }
         }
       }
     }
   </script>
   <style>
-    body { background: #0f1117; font-family: 'Inter', system-ui, sans-serif; }
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    .pulse-dot { animation: pulse 2s infinite; }
-    @keyframes pulse {
+    @font-face { font-family: 'Orbitron'; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #020408;
+      font-family: 'Rajdhani', sans-serif;
+      overflow-x: hidden;
+      color: #8899bb;
+    }
+    .font-hud { font-family: 'Orbitron', monospace; }
+    .font-data { font-family: 'JetBrains Mono', monospace; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #060a12; }
+    ::-webkit-scrollbar-thumb { background: #00f0ff30; border-radius: 2px; }
+
+    /* === SCANLINES === */
+    .scanlines::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,240,255,0.008) 2px,
+        rgba(0,240,255,0.008) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* === HEX GRID BG === */
+    .hex-grid {
+      background-image:
+        radial-gradient(circle at 25% 25%, rgba(0,240,255,0.02) 1px, transparent 1px),
+        radial-gradient(circle at 75% 75%, rgba(255,0,102,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* === NEON BORDERS === */
+    .neon-border {
+      border: 1px solid #00f0ff15;
+      box-shadow: inset 0 0 30px rgba(0,240,255,0.03), 0 0 1px rgba(0,240,255,0.1);
+    }
+    .neon-border:hover {
+      border-color: #00f0ff30;
+      box-shadow: inset 0 0 40px rgba(0,240,255,0.05), 0 0 8px rgba(0,240,255,0.1);
+    }
+
+    /* === CORNER BRACKETS === */
+    .corner-brackets {
+      position: relative;
+    }
+    .corner-brackets::before,
+    .corner-brackets::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: #00f0ff40;
+      border-style: solid;
+    }
+    .corner-brackets::before {
+      top: -1px; left: -1px;
+      border-width: 1px 0 0 1px;
+    }
+    .corner-brackets::after {
+      bottom: -1px; right: -1px;
+      border-width: 0 1px 1px 0;
+    }
+
+    /* === GLITCH TEXT === */
+    @keyframes glitch {
+      0%, 100% { text-shadow: -1px 0 #ff0066, 1px 0 #00f0ff; }
+      25% { text-shadow: 1px 0 #ff0066, -1px 0 #00f0ff; }
+      50% { text-shadow: -1px 1px #ff0066, 1px -1px #00f0ff; }
+      75% { text-shadow: 1px -1px #ff0066, -1px 1px #00f0ff; }
+    }
+    .glitch-text { animation: glitch 3s infinite; }
+
+    /* === DATA STREAM === */
+    @keyframes dataStream {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 0% 100%; }
+    }
+    .data-stream {
+      background: linear-gradient(180deg,
+        transparent 0%,
+        #00f0ff08 20%,
+        #00f0ff15 50%,
+        #00f0ff08 80%,
+        transparent 100%
+      );
+      background-size: 100% 200%;
+      animation: dataStream 3s linear infinite;
+    }
+
+    /* === PIPELINE BACKGROUND BLOBS — contrasting colors === */
+    .pipeline-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes blobFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(30px, -20px) scale(1.1); }
+      50% { transform: translate(-20px, 30px) scale(0.95); }
+      75% { transform: translate(-30px, -15px) scale(1.05); }
+    }
+    @keyframes blobPulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+
+    .bg-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      mix-blend-mode: screen;
+      animation: blobFloat 15s ease-in-out infinite, blobPulse 6s ease-in-out infinite;
+    }
+    /* HOT RED — top left */
+    .bg-blob-1 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, #ff1a1a 0%, #ff1a1a60 30%, transparent 70%);
+      top: -60px; left: -40px;
+      animation-delay: 0s, 0s;
+    }
+    /* ELECTRIC ORANGE — top center */
+    .bg-blob-2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, #ff6600 0%, #ff660060 30%, transparent 70%);
+      top: -40px; left: 25%;
+      animation-delay: 2s, 1s;
+    }
+    /* DEEP MAGENTA — center right */
+    .bg-blob-3 {
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, #ff0066 0%, #ff006660 30%, transparent 70%);
+      top: 10px; right: 10%;
+      animation-delay: 4s, 2s;
+    }
+    /* GOLD/YELLOW — bottom left */
+    .bg-blob-4 {
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, #ffcc00 0%, #ffcc0060 30%, transparent 70%);
+      bottom: -50px; left: 15%;
+      animation-delay: 6s, 3s;
+    }
+    /* CRIMSON — bottom right */
+    .bg-blob-5 {
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, #cc0044 0%, #cc004460 30%, transparent 70%);
+      bottom: -30px; right: 20%;
+      animation-delay: 3s, 4s;
+    }
+    /* BURNT ORANGE — center */
+    .bg-blob-6 {
+      width: 240px; height: 240px;
+      background: radial-gradient(circle, #ff4400 0%, #ff440060 30%, transparent 70%);
+      top: 40%; left: 50%;
+      transform: translateX(-50%);
+      animation-delay: 5s, 2.5s;
+    }
+
+    /* === ENERGY GRID LINES (over blobs) === */
+    .energy-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background:
+        repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(0,240,255,0.04) 59px, rgba(0,240,255,0.04) 60px),
+        repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(0,240,255,0.04) 59px, rgba(0,240,255,0.04) 60px);
+    }
+
+    /* === LASER SWEEP === */
+    @keyframes laserSweep {
+      0% { left: -30%; opacity: 0; }
+      5% { opacity: 1; }
+      95% { opacity: 1; }
+      100% { left: 130%; opacity: 0; }
+    }
+    .laser-line {
+      position: absolute;
+      height: 2px;
+      pointer-events: none;
+      z-index: 2;
+      animation: laserSweep 8s linear infinite;
+    }
+    .laser-1 {
+      width: 40%; top: 30%;
+      background: linear-gradient(90deg, transparent, #ff1a1a90, #ff660090, transparent);
+      animation-delay: 0s;
+    }
+    .laser-2 {
+      width: 35%; top: 55%;
+      background: linear-gradient(90deg, transparent, #ff006690, #ffcc0090, transparent);
+      animation-delay: 3s;
+      animation-duration: 10s;
+    }
+    .laser-3 {
+      width: 25%; top: 75%;
+      background: linear-gradient(90deg, transparent, #cc004490, #ff440090, transparent);
+      animation-delay: 5s;
+      animation-duration: 12s;
+    }
+
+    /* === FLOW PARTICLES === */
+    @keyframes flowH {
+      0% { left: -10px; opacity: 0; }
+      8% { opacity: 1; }
+      92% { opacity: 1; }
+      100% { left: calc(100% + 10px); opacity: 0; }
+    }
+    .flow-dot {
+      position: absolute;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      top: -2px;
+      animation: flowH 2.5s linear infinite;
+    }
+    .flow-dot:nth-child(2) { animation-delay: 0.8s; }
+    .flow-dot:nth-child(3) { animation-delay: 1.6s; }
+
+    @keyframes flowV {
+      0% { top: -10px; opacity: 0; }
+      8% { opacity: 1; }
+      92% { opacity: 1; }
+      100% { top: calc(100% + 10px); opacity: 0; }
+    }
+    .flow-dot-v {
+      position: absolute;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      left: -2px;
+      animation: flowV 1.8s linear infinite;
+    }
+
+    /* === NODE HOVER SOUND TRIGGER === */
+    .wf-node {
+      transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+      transform-style: preserve-3d;
+      transform: translateZ(0);
+    }
+    .wf-node:hover {
+      transform: translateZ(15px) scale(1.06);
+    }
+
+    /* === HOLOGRAPHIC SHIMMER === */
+    @keyframes holoShimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .holo-shimmer {
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(0,240,255,0.05) 25%,
+        rgba(255,0,102,0.05) 50%,
+        rgba(0,255,136,0.05) 75%,
+        transparent 100%
+      );
+      background-size: 200% 100%;
+      animation: holoShimmer 4s linear infinite;
+    }
+
+    /* === RADAR SWEEP === */
+    @keyframes radarSweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .radar-sweep {
+      animation: radarSweep 4s linear infinite;
+    }
+
+    /* === 3D PIPELINE === */
+    .pipeline-perspective {
+      perspective: 1400px;
+      perspective-origin: 50% 40%;
+    }
+    .pipeline-stage {
+      transform-style: preserve-3d;
+      transform: rotateX(6deg) rotateY(-1deg);
+      transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .pipeline-stage:hover {
+      transform: rotateX(2deg) rotateY(0deg);
+    }
+
+    /* === FLOAT ANIM === */
+    @keyframes nodeFloat {
+      0%, 100% { transform: translateY(0) translateZ(0); }
+      50% { transform: translateY(-8px) translateZ(12px); }
+    }
+    .float-0 { animation: nodeFloat 5s ease-in-out infinite; }
+    .float-1 { animation: nodeFloat 5s ease-in-out infinite 0.7s; }
+    .float-2 { animation: nodeFloat 5s ease-in-out infinite 1.4s; }
+    .float-3 { animation: nodeFloat 5s ease-in-out infinite 2.1s; }
+    .float-4 { animation: nodeFloat 5s ease-in-out infinite 2.8s; }
+    .float-5 { animation: nodeFloat 5s ease-in-out infinite 3.5s; }
+
+    /* === PULSE RING === */
+    @keyframes pulseRing {
+      0% { transform: scale(0.8); opacity: 0.9; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+    .pulse-ring { animation: pulseRing 2s ease-out infinite; }
+
+    /* === STATUS BLINK === */
+    @keyframes blink {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      50% { opacity: 0.2; }
     }
-    .gradient-border {
-      background: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
-      padding: 1px;
-      border-radius: 0.75rem;
+    .blink { animation: blink 2s ease-in-out infinite; }
+
+    /* === ROW SLIDE IN === */
+    @keyframes rowSlide {
+      from { opacity: 0; transform: translateX(-30px) skewX(-2deg); }
+      to { opacity: 1; transform: translateX(0) skewX(0deg); }
     }
-    .gradient-border > div { background: #1a1d27; border-radius: calc(0.75rem - 1px); }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #1a1d27; }
-    ::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 3px; }
+    .row-slide { animation: rowSlide 0.5s ease-out; }
+
+    /* === MODAL === */
+    .modal-bg {
+      backdrop-filter: blur(12px) saturate(0.5);
+      background: rgba(2,4,8,0.8);
+    }
+    .input-hud {
+      background: #060a12;
+      border: 1px solid #00f0ff20;
+      color: #00f0ff;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+    }
+    .input-hud:focus {
+      border-color: #00f0ff60;
+      box-shadow: 0 0 20px rgba(0,240,255,0.1), inset 0 0 20px rgba(0,240,255,0.03);
+      outline: none;
+    }
+
+    /* === AUDIO TOGGLE === */
+    .audio-btn {
+      transition: all 0.3s;
+    }
+    .audio-btn.muted { opacity: 0.3; }
   </style>
 </head>
-<body class="dark">
+<body class="scanlines hex-grid min-h-screen">
   <div id="root"></div>
 
+  <script>
+    // === AUDIO ENGINE ===
+    window.SFX = (function() {
+      let ctx = null;
+      let muted = false;
+      let initialized = false;
+
+      function init() {
+        if (initialized) return;
+        try {
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          initialized = true;
+        } catch(e) {}
+      }
+
+      function tone(freq, dur, type, vol, detune) {
+        if (!ctx || muted) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.value = freq;
+        if (detune) osc.detune.value = detune;
+        gain.gain.setValueAtTime(vol || 0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.15));
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + (dur || 0.15));
+      }
+
+      function noise(dur, vol) {
+        if (!ctx || muted) return;
+        const bufSize = ctx.sampleRate * (dur || 0.08);
+        const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+        const src = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 2000;
+        filter.Q.value = 2;
+        src.buffer = buf;
+        gain.gain.setValueAtTime(vol || 0.03, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.08));
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        src.start();
+      }
+
+      return {
+        init,
+        hover() { tone(1200, 0.08, 'sine', 0.04); },
+        click() { tone(800, 0.06, 'square', 0.03); tone(1600, 0.1, 'sine', 0.04); },
+        success() {
+          tone(523, 0.15, 'sine', 0.06);
+          setTimeout(() => tone(659, 0.15, 'sine', 0.06), 100);
+          setTimeout(() => tone(784, 0.2, 'sine', 0.07), 200);
+        },
+        error() {
+          tone(300, 0.2, 'sawtooth', 0.04);
+          setTimeout(() => tone(200, 0.3, 'sawtooth', 0.05), 150);
+        },
+        send() {
+          tone(400, 0.1, 'sine', 0.05);
+          setTimeout(() => tone(600, 0.1, 'sine', 0.05), 80);
+          setTimeout(() => tone(900, 0.15, 'sine', 0.06), 160);
+          setTimeout(() => noise(0.06, 0.02), 250);
+        },
+        dataFlow() { tone(1800, 0.05, 'sine', 0.02); noise(0.04, 0.01); },
+        nodeActivate(freq) {
+          tone(freq || 600, 0.12, 'sine', 0.05);
+          tone((freq || 600) * 1.5, 0.15, 'sine', 0.03, 5);
+          noise(0.05, 0.015);
+        },
+        ambient() {
+          if (!ctx || muted) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = 55;
+          gain.gain.value = 0.008;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          // subtle low hum
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.value = 82;
+          gain2.gain.value = 0.005;
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start();
+        },
+        toggle() { muted = !muted; return !muted; },
+        isMuted() { return muted; },
+      };
+    })();
+  </script>
+
   <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
-    const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } = Recharts;
+    const { useState, useEffect, useCallback, useRef } = React;
 
-    // === CONFIG ===
-    const WEBHOOK_URL = 'http://localhost:5678/webhook/finfix/stats';
-    const POLL_INTERVAL = 10000;
+    const N8N_BASE = 'http://localhost:5678/webhook';
+    const STATS_URL = `${N8N_BASE}/finfix/stats`;
+    const PURCHASE_URL = `${N8N_BASE}/finfix/purchase`;
 
-    // === COMPONENTS ===
+    // === HUD ICONS ===
+    const I = {
+      bolt: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>,
+      shield: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>,
+      wallet: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" /></svg>,
+      send: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>,
+      x: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>,
+      vol: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>,
+      mute: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>,
+      cpu: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z" /></svg>,
+      spark: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>,
+      route: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>,
+      net: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" /></svg>,
+    };
 
-    function StatCard({ label, value, subtext, color = 'text-white', icon }) {
+    // === FLOW LINE ===
+    function FlowLine({ color = '#00f0ff', vertical }) {
+      if (vertical) {
+        return (
+          <div className="relative w-[2px] h-full mx-auto" style={{ background: `linear-gradient(180deg, transparent, ${color}50, transparent)` }}>
+            <div className="flow-dot-v" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
+            <div className="flow-dot-v" style={{ background: color, boxShadow: `0 0 8px ${color}`, animationDelay: '0.6s' }} />
+          </div>
+        );
+      }
       return (
-        <div className="gradient-border">
-          <div className="p-5">
+        <div className="relative flex-1 self-center mx-1 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${color}40, transparent)` }}>
+          <div className="flow-dot" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+          <div className="flow-dot" style={{ background: color, boxShadow: `0 0 10px ${color}`, animationDelay: '0.8s' }} />
+          <div className="flow-dot" style={{ background: color, boxShadow: `0 0 10px ${color}`, animationDelay: '1.6s' }} />
+        </div>
+      );
+    }
+
+    // === WORKFLOW NODE ===
+    function WFNode({ icon, label, sub, color, active, cls, onHover }) {
+      return (
+        <div
+          onMouseEnter={() => { SFX.hover(); onHover && onHover(); }}
+          className={`wf-node relative cursor-pointer rounded-lg border px-5 py-4 min-w-[130px] text-center corner-brackets ${cls}`}
+          style={{ borderColor: `${color}25`, background: `linear-gradient(180deg, ${color}08, transparent)` }}
+        >
+          {active && (
+            <div className="absolute -top-1.5 -right-1.5 z-20">
+              <span className="relative flex h-3.5 w-3.5">
+                <span className="pulse-ring absolute inline-flex h-full w-full rounded-full" style={{ background: color }} />
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+              </span>
+            </div>
+          )}
+          <div className="flex justify-center mb-2" style={{ color, filter: `drop-shadow(0 0 6px ${color}60)` }}>{icon}</div>
+          <div className="text-white text-[11px] font-semibold font-hud tracking-wider">{label}</div>
+          {sub && <div className="text-[9px] mt-0.5 opacity-50">{sub}</div>}
+        </div>
+      );
+    }
+
+    // === STAT HUD ===
+    function StatHUD({ label, value, sub, color, icon }) {
+      return (
+        <div className="neon-border corner-brackets rounded-lg p-4 holo-shimmer relative overflow-hidden group"
+          onMouseEnter={() => SFX.hover()}>
+          <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm font-medium">{label}</span>
-              <span className="text-lg">{icon}</span>
+              <span className="text-[10px] font-hud tracking-[0.2em] uppercase opacity-50">{label}</span>
+              <span style={{ color }} className="opacity-40 group-hover:opacity-80 transition-opacity">{icon}</span>
             </div>
-            <div className={`text-3xl font-bold ${color} mono`}>{value}</div>
-            {subtext && <div className="text-gray-500 text-xs mt-1">{subtext}</div>}
+            <div className="font-hud text-2xl font-bold tracking-wide" style={{ color, textShadow: `0 0 20px ${color}40` }}>{value}</div>
+            {sub && <div className="text-[10px] font-data mt-1 opacity-40">{sub}</div>}
           </div>
         </div>
       );
     }
 
-    function WalletCard({ name, balance, role }) {
-      const balNum = parseFloat(balance) || 0;
-      const color = balNum < 10 ? 'text-danger' : balNum < 50 ? 'text-warning' : 'text-success';
+    // === WALLET HUD ===
+    function WalletHUD({ name, bal, role, color }) {
+      const b = parseFloat(bal) || 0;
+      const pct = Math.min(100, (b / 200) * 100);
       return (
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
+        <div className="neon-border rounded-lg p-3 group" onMouseEnter={() => SFX.hover()}>
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <div className="text-white font-semibold text-sm">{name}</div>
-              <div className="text-gray-500 text-xs">{role}</div>
+              <div className="text-white text-xs font-semibold">{name}</div>
+              <div className="text-[9px] opacity-30">{role}</div>
             </div>
-            <div className={`mono text-lg font-bold ${color}`}>
-              ${balNum.toFixed(2)}
+            <div className="font-data text-lg font-bold" style={{ color: b < 10 ? '#ff0066' : color, textShadow: `0 0 12px ${b < 10 ? '#ff006640' : color + '40'}` }}>
+              ${b.toFixed(2)}
             </div>
+          </div>
+          <div className="h-[3px] bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}80)`, boxShadow: `0 0 8px ${color}40` }} />
           </div>
         </div>
       );
     }
 
-    function FixTypeBadge({ type }) {
-      const styles = {
-        DATA_FIX: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-        CHECKOUT_FIX: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-        PAYMENT_FIX: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-        DIRECT: 'bg-green-500/20 text-green-400 border-green-500/30',
-        NONE: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    // === FIX BADGE ===
+    function FixBadge({ type }) {
+      const m = {
+        DATA_FIX: { c: '#00f0ff', l: 'DATA FIX' },
+        CHECKOUT_FIX: { c: '#7b61ff', l: 'CHECKOUT FIX' },
+        PAYMENT_FIX: { c: '#ff6600', l: 'PAYMENT FIX' },
+        DIRECT_CHECKOUT: { c: '#00ff88', l: 'DIRECT' },
       };
-      const labels = {
-        DATA_FIX: 'Data Fix',
-        CHECKOUT_FIX: 'Checkout Fix',
-        PAYMENT_FIX: 'Payment Fix',
-        DIRECT: 'Direct',
-        NONE: 'No Fix',
-      };
-      return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${styles[type] || styles.NONE}`}>
-          {labels[type] || type}
-        </span>
-      );
+      const s = m[type] || { c: '#556688', l: type || '—' };
+      return <span className="font-hud text-[8px] tracking-[0.15em] px-2 py-0.5 rounded border" style={{ color: s.c, borderColor: s.c + '30', background: s.c + '10', textShadow: `0 0 8px ${s.c}30` }}>{s.l}</span>;
     }
 
+    // === STATUS BADGE ===
     function StatusBadge({ status }) {
-      const s = status === 'completed'
-        ? 'bg-green-500/20 text-green-400'
-        : status === 'failed'
-        ? 'bg-red-500/20 text-red-400'
-        : 'bg-yellow-500/20 text-yellow-400';
+      const s = (status === 'success' || status === 'completed')
+        ? { c: '#00ff88', l: 'OK' }
+        : (status === 'failed' || status === 'error')
+        ? { c: '#ff0066', l: 'FAIL' }
+        : (status === 'escalated')
+        ? { c: '#ff6600', l: 'ESC' }
+        : { c: '#00f0ff', l: 'PEND' };
+      return <span className="font-hud text-[8px] tracking-[0.15em] px-2 py-0.5 rounded" style={{ color: s.c, background: s.c + '15', textShadow: `0 0 6px ${s.c}30` }}>{s.l}</span>;
+    }
+
+    // === PURCHASE MODAL ===
+    function PurchaseModal({ isOpen, onClose, onSubmit, loading }) {
+      const [form, setForm] = useState({
+        product_url: 'https://www.amazon.com/dp/B09V3KXJPB',
+        quantity: 1, max_price: 30,
+        user_email: 'test@example.com', agent_id: 'hud-agent',
+      });
+      if (!isOpen) return null;
+      const presets = [
+        { l: 'AMAZON', url: 'https://www.amazon.com/dp/B09V3KXJPB', p: 30 },
+        { l: 'BROKEN MERCHANT', url: 'https://example.com/products/wireless-headphones', p: 150 },
+        { l: 'SHOPIFY', url: 'https://store.myshopify.com/products/usb-cable', p: 15 },
+      ];
       return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s}`}>
-          {status}
-        </span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-bg" onClick={onClose}>
+          <div className="neon-border corner-brackets rounded-xl p-6 w-full max-w-lg mx-4 bg-panel relative overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="data-stream absolute inset-0 pointer-events-none opacity-30" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="font-hud text-neon text-sm tracking-[0.15em]">NEW TRANSACTION</h3>
+                  <p className="text-[10px] opacity-40 mt-1">Route through FinFix pipeline</p>
+                </div>
+                <button onClick={() => { SFX.click(); onClose(); }} className="opacity-40 hover:opacity-100 text-plasma transition-opacity">{I.x}</button>
+              </div>
+              <div className="flex gap-2 mb-4">
+                {presets.map((p, i) => (
+                  <button key={i} onClick={() => { SFX.click(); setForm(f => ({ ...f, product_url: p.url, max_price: p.p })); }}
+                    className="font-hud text-[8px] tracking-[0.12em] px-3 py-1.5 rounded border border-neon/20 text-neon/70 hover:bg-neon/10 hover:text-neon transition-all">
+                    {p.l}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="font-hud text-[9px] tracking-[0.15em] text-neon/40 mb-1 block">PRODUCT URL</label>
+                  <input className="input-hud w-full rounded-lg px-3 py-2.5 text-xs"
+                    value={form.product_url} onChange={e => setForm(f => ({ ...f, product_url: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-hud text-[9px] tracking-[0.15em] text-neon/40 mb-1 block">QTY</label>
+                    <input type="number" className="input-hud w-full rounded-lg px-3 py-2.5 text-xs"
+                      value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: parseInt(e.target.value) || 1 }))} />
+                  </div>
+                  <div>
+                    <label className="font-hud text-[9px] tracking-[0.15em] text-neon/40 mb-1 block">MAX PRICE</label>
+                    <input type="number" className="input-hud w-full rounded-lg px-3 py-2.5 text-xs"
+                      value={form.max_price} onChange={e => setForm(f => ({ ...f, max_price: parseFloat(e.target.value) || 0 }))} />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-hud text-[9px] tracking-[0.15em] text-neon/40 mb-1 block">RECIPIENT</label>
+                  <input className="input-hud w-full rounded-lg px-3 py-2.5 text-xs"
+                    value={form.user_email} onChange={e => setForm(f => ({ ...f, user_email: e.target.value }))} />
+                </div>
+              </div>
+              <button onClick={() => { SFX.send(); onSubmit(form); }} disabled={loading}
+                className="mt-5 w-full py-3 rounded-lg font-hud text-[11px] tracking-[0.2em] text-void font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-30 hover:shadow-[0_0_30px_rgba(0,240,255,0.3)]"
+                style={{ background: 'linear-gradient(135deg, #00f0ff, #00ff88)' }}>
+                {loading ? 'PROCESSING...' : <>{I.send} TRANSMIT</>}
+              </button>
+            </div>
+          </div>
+        </div>
       );
     }
 
     // === MAIN APP ===
-
     function App() {
+      const [wallets, setWallets] = useState({ treasury: 0, fixer: 0, escrow: 0, fees: 0 });
       const [transactions, setTransactions] = useState([]);
-      const [wallets, setWallets] = useState({
-        treasury: 0,
-        fixer: 0,
-        escrow: 0,
-        fees: 0,
-      });
       const [isLive, setIsLive] = useState(false);
-      const [lastUpdate, setLastUpdate] = useState(new Date());
-      const [error, setError] = useState(null);
+      const [lastUpdate, setLastUpdate] = useState(null);
+      const [showModal, setShowModal] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [lastResult, setLastResult] = useState(null);
+      const [activeNode, setActiveNode] = useState(null);
+      const [audioOn, setAudioOn] = useState(false);
+      const [time, setTime] = useState(new Date());
 
-      const fetchData = useCallback(async () => {
+      // Clock
+      useEffect(() => {
+        const iv = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(iv);
+      }, []);
+
+      // Fetch stats
+      const fetchStats = useCallback(async () => {
         try {
-          const res = await fetch(WEBHOOK_URL);
+          const res = await fetch(STATS_URL);
           if (res.ok) {
             const data = await res.json();
-            if (data.transactions) setTransactions(data.transactions);
             if (data.wallets) setWallets(data.wallets);
+            if (data.transactions) setTransactions(data.transactions);
             setIsLive(true);
-            setError(null);
-          } else {
-            setIsLive(false);
-            setError(`API returned ${res.status}`);
-          }
-        } catch (e) {
-          setIsLive(false);
-          setError('Cannot reach n8n webhook');
-        }
+          } else setIsLive(false);
+        } catch { setIsLive(false); }
         setLastUpdate(new Date());
       }, []);
 
       useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, POLL_INTERVAL);
-        return () => clearInterval(interval);
-      }, [fetchData]);
+        fetchStats();
+        const iv = setInterval(fetchStats, 8000);
+        return () => clearInterval(iv);
+      }, [fetchStats]);
 
-      // Computed stats
-      const totalTxns = transactions.length;
-      const failedAttempts = transactions.filter(t => t.failure_type !== 'NONE' && t.failure_type !== 'DIRECT').length;
-      const fixed = transactions.filter(t => t.fix_applied !== 'DIRECT' && t.fix_applied !== 'NONE' && t.status === 'completed').length;
-      const fixRate = failedAttempts > 0 ? Math.round((fixed / failedAttempts) * 100) : 0;
-      const totalSettled = transactions.filter(t => t.status === 'completed').reduce((s, t) => s + (t.amount || 0), 0);
-      const totalFees = transactions.filter(t => t.status === 'completed').reduce((s, t) => s + (t.fee || 0), 0);
+      // Submit purchase
+      const handlePurchase = async (form) => {
+        setLoading(true);
+        setActiveNode('agent');
+        setLastResult(null);
+        try {
+          SFX.nodeActivate(400);
+          setTimeout(() => { setActiveNode('webhook'); SFX.nodeActivate(500); }, 600);
+          setTimeout(() => { setActiveNode('classify'); SFX.nodeActivate(700); }, 1200);
+          setTimeout(() => { setActiveNode('router'); SFX.nodeActivate(600); }, 1800);
 
-      // Fix type breakdown for pie chart
-      const fixCounts = transactions.reduce((acc, t) => {
-        if (t.fix_applied && t.fix_applied !== 'DIRECT' && t.fix_applied !== 'NONE') {
-          acc[t.fix_applied] = (acc[t.fix_applied] || 0) + 1;
+          const res = await fetch(PURCHASE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+          });
+          const data = await res.json();
+          setLastResult(data);
+
+          if (data.transaction) {
+            setTransactions(prev => [...prev, {
+              id: Date.now(),
+              product: data.transaction.product,
+              fix_applied: data.transaction.fix_applied,
+              amount: data.transaction.amount_usdc,
+              fee: data.transaction.fee_usdc,
+              tx_hash: data.transaction.tx_hash,
+              status: data.status,
+              timestamp: data.transaction.timestamp,
+            }]);
+          }
+
+          setTimeout(() => { setActiveNode('crossmint'); SFX.nodeActivate(800); }, 2400);
+          setTimeout(() => { setActiveNode('settle'); SFX.nodeActivate(1000); }, 3200);
+          setTimeout(() => { setActiveNode(null); SFX.success(); fetchStats(); }, 4000);
+        } catch (e) {
+          setLastResult({ status: 'error', message: e.message });
+          setActiveNode(null);
+          SFX.error();
         }
-        return acc;
-      }, {});
+        setLoading(false);
+        setShowModal(false);
+      };
 
-      const pieData = Object.entries(fixCounts).map(([name, value]) => ({ name, value }));
-      const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#22c55e'];
+      const totalTx = transactions.length;
+      const fixedCount = transactions.filter(t => t.fix_applied && !['DIRECT_CHECKOUT','NONE'].includes(t.fix_applied) && ['success','completed'].includes(t.status)).length;
+      const totalSettled = transactions.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+      const totalFees = transactions.reduce((s, t) => s + (parseFloat(t.fee) || 0), 0);
 
-      // Timeline data for area chart
-      const timelineMap = {};
-      transactions.forEach(t => {
-        const hour = t.timestamp.substring(11, 13) + ':00';
-        if (!timelineMap[hour]) timelineMap[hour] = { time: hour, total: 0, fixed: 0 };
-        timelineMap[hour].total++;
-        if (t.fix_applied !== 'DIRECT' && t.fix_applied !== 'NONE' && t.status === 'completed') {
-          timelineMap[hour].fixed++;
-        }
-      });
-      const timelineData = Object.values(timelineMap).sort((a, b) => a.time.localeCompare(b.time));
+      const toggleAudio = () => {
+        SFX.init();
+        const on = SFX.toggle();
+        setAudioOn(on);
+        if (on) { SFX.click(); SFX.ambient(); }
+      };
 
       return (
-        <div className="min-h-screen p-6 max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+        <div className="min-h-screen p-4 md:p-6 max-w-[1500px] mx-auto">
+
+          {/* ====== HEADER HUD ====== */}
+          <header className="flex items-center justify-between mb-6 pb-4 border-b border-neon/10">
             <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-lg border border-neon/30 flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #00f0ff10, #00ff8810)', boxShadow: '0 0 20px rgba(0,240,255,0.1)' }}>
+                  <span className="font-hud text-neon text-xs font-black glitch-text">FX</span>
+                </div>
+                {isLive && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-neon-2 blink" style={{ boxShadow: '0 0 8px #00ff88' }} />}
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                  FinFix
-                  <span className="text-sm font-normal bg-accent/20 text-accent px-2 py-0.5 rounded-full">
-                    Dashboard
-                  </span>
+                <h1 className="font-hud text-base text-white tracking-[0.25em] font-bold">
+                  FINFIX
+                  <span className="ml-2 text-[8px] font-normal text-neon/40 tracking-[0.15em] border border-neon/15 px-1.5 py-0.5 rounded">COMMAND CENTER</span>
                 </h1>
-                <p className="text-gray-500 text-sm">Self-Healing Middleware for Agentic Commerce</p>
+                <p className="text-[10px] tracking-[0.3em] opacity-30 mt-0.5">SELF-HEALING AGENTIC COMMERCE MIDDLEWARE</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${isLive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 pulse-dot' : 'bg-red-400'}`}></span>
-                {isLive ? 'Live' : 'Disconnected'}
+              {/* Clock */}
+              <div className="font-data text-[10px] text-neon/30 tracking-wider hidden md:block">
+                {time.toLocaleDateString('en-US', { month:'short', day:'2-digit', year:'numeric' }).toUpperCase()}
+                <span className="text-neon/60 ml-2">{time.toLocaleTimeString('en-US', { hour12: false })}</span>
               </div>
-              <span className="text-gray-600 text-xs mono">
-                Updated: {lastUpdate.toLocaleTimeString()}
-              </span>
+              <div className="w-px h-5 bg-neon/10 hidden md:block" />
+              {/* Audio toggle */}
+              <button onClick={toggleAudio}
+                className={`audio-btn p-2 rounded-lg border border-neon/15 ${audioOn ? 'text-neon' : 'text-neon/20 muted'}`}
+                title={audioOn ? 'Mute' : 'Unmute'}>
+                {audioOn ? I.vol : I.mute}
+              </button>
+              {/* Status */}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-hud tracking-[0.15em] border ${isLive ? 'border-neon-2/30 text-neon-2' : 'border-plasma/30 text-plasma'}`}>
+                <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-neon-2 blink' : 'bg-plasma'}`} style={{ boxShadow: isLive ? '0 0 6px #00ff88' : '0 0 6px #ff0066' }} />
+                {isLive ? 'ONLINE' : 'OFFLINE'}
+              </div>
+              <button onClick={() => { SFX.click(); setShowModal(true); }}
+                onMouseEnter={() => SFX.hover()}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-hud text-[10px] tracking-[0.15em] text-void font-bold transition-all hover:scale-105 active:scale-95 hover:shadow-[0_0_25px_rgba(0,240,255,0.25)]"
+                style={{ background: 'linear-gradient(135deg, #00f0ff, #00ff88)' }}>
+                {I.bolt} TRANSACT
+              </button>
             </div>
-          </div>
+          </header>
 
-          {/* Connection Error Banner */}
-          {error && (
-            <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 flex items-center gap-3">
-              <span className="text-red-400 text-sm font-medium">{error}</span>
-              <span className="text-red-400/60 text-xs">Ensure n8n is running and the dashboard-data workflow is active at {WEBHOOK_URL}</span>
+          {/* ====== 3D PIPELINE WITH CONTRASTING BG ====== */}
+          <section className="mb-6">
+            <div className="relative neon-border rounded-xl p-5 overflow-hidden">
+
+              {/* === CONTRASTING COLOR BLOBS (reds, oranges, magentas — NOT matching nodes) === */}
+              <div className="pipeline-bg">
+                <div className="bg-blob bg-blob-1" />
+                <div className="bg-blob bg-blob-2" />
+                <div className="bg-blob bg-blob-3" />
+                <div className="bg-blob bg-blob-4" />
+                <div className="bg-blob bg-blob-5" />
+                <div className="bg-blob bg-blob-6" />
+              </div>
+
+              {/* Energy grid overlay */}
+              <div className="energy-grid" />
+
+              {/* Laser sweeps */}
+              <div className="laser-line laser-1" />
+              <div className="laser-line laser-2" />
+              <div className="laser-line laser-3" />
+
+              {/* Content */}
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-neon opacity-60">{I.cpu}</span>
+                  <h2 className="font-hud text-[11px] text-white tracking-[0.2em]">PIPELINE STATUS</h2>
+                  <div className="flex-1" />
+                  <span className="font-data text-[9px] text-neon/30">n8n orchestration // solana devnet</span>
+                </div>
+
+                <div className="pipeline-perspective">
+                  <div className="pipeline-stage">
+                    {/* Main flow */}
+                    <div className="flex items-center gap-0 overflow-x-auto pb-4">
+                      <WFNode icon={I.cpu} label="AI AGENT" sub="purchase req" color="#00f0ff" active={activeNode==='agent'} cls="float-0" />
+                      <FlowLine color="#00f0ff" />
+                      <WFNode icon={I.net} label="WEBHOOK" sub="POST /finfix" color="#00f0ff" active={activeNode==='webhook'} cls="float-1" />
+                      <FlowLine color="#7b61ff" />
+                      <WFNode icon={I.spark} label="CLASSIFIER" sub="claude sonnet" color="#7b61ff" active={activeNode==='classify'} cls="float-2" />
+                      <FlowLine color="#ccff00" />
+                      <WFNode icon={I.route} label="FIX ROUTER" sub="classify & route" color="#ccff00" active={activeNode==='router'} cls="float-3" />
+                      <FlowLine color="#00ff88" />
+                      <WFNode icon={I.shield} label="CROSSMINT" sub="world store" color="#00ff88" active={activeNode==='crossmint'} cls="float-4" />
+                      <FlowLine color="#00f0ff" />
+                      <WFNode icon={I.wallet} label="SETTLE" sub="USDC transfer" color="#00f0ff" active={activeNode==='settle'} cls="float-5" />
+                    </div>
+
+                    {/* Branches */}
+                    <div className="flex justify-center mt-1">
+                      <div className="flex items-start gap-6" style={{ marginLeft: '220px' }}>
+                        {[
+                          { l: 'DATA FIX', s: 'scrape & extract', c: '#00f0ff' },
+                          { l: 'CHECKOUT', s: 'world store reroute', c: '#7b61ff' },
+                          { l: 'PAYMENT', s: 'USDC rails', c: '#ccff00' },
+                          { l: 'ESCALATE', s: 'human review', c: '#ff0066' },
+                        ].map((b, i) => (
+                          <div key={i} className="flex flex-col items-center">
+                            <div className="h-5 relative"><FlowLine color={b.c} vertical /></div>
+                            <div className="text-center px-3 py-1.5 rounded border" style={{ borderColor: b.c + '20', background: b.c + '06' }}>
+                              <div className="font-hud text-[8px] tracking-[0.12em]" style={{ color: b.c }}>{b.l}</div>
+                              <div className="text-[8px] opacity-30">{b.s}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ====== RESULT BANNER ====== */}
+          {lastResult && (
+            <div className={`mb-5 neon-border rounded-lg px-4 py-3 flex items-center justify-between`}
+              style={{ borderColor: lastResult.status === 'success' ? '#00ff8830' : lastResult.status === 'error' ? '#ff006630' : '#ff660030' }}>
+              <div className="flex items-center gap-3">
+                <span style={{ color: lastResult.status === 'success' ? '#00ff88' : '#ff0066', filter: `drop-shadow(0 0 6px ${lastResult.status === 'success' ? '#00ff88' : '#ff0066'})` }}>
+                  {lastResult.status === 'success' ? I.shield : I.bolt}
+                </span>
+                <div>
+                  <div className="text-white text-xs font-semibold">{lastResult.message || 'Transaction processed'}</div>
+                  {lastResult.transaction && (
+                    <div className="font-data text-[10px] opacity-40 mt-0.5">
+                      {lastResult.transaction.product} // ${lastResult.transaction.amount_usdc} USDC // {lastResult.transaction.fix_applied}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setLastResult(null)} className="opacity-30 hover:opacity-100 transition-opacity">{I.x}</button>
             </div>
           )}
 
-          {/* Stats Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <StatCard label="Total Transactions" value={totalTxns} icon="&#x1f4e6;" />
-            <StatCard label="Failures Detected" value={failedAttempts} color="text-warning" icon="&#x26a0;" />
-            <StatCard label="Auto-Fixed" value={fixed} color="text-success" subtext={`${fixRate}% fix rate`} icon="&#x2705;" />
-            <StatCard label="USDC Settled" value={`$${totalSettled.toFixed(2)}`} color="text-accent" icon="&#x1f4b0;" />
-            <StatCard label="Fees Earned" value={`$${totalFees.toFixed(2)}`} color="text-purple-400" subtext="2% per tx" icon="&#x1f4b8;" />
+          {/* ====== STATS ROW ====== */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <StatHUD label="TRANSACTIONS" value={totalTx} sub="total processed" color="#00f0ff" icon={I.cpu} />
+            <StatHUD label="AUTO-FIXED" value={fixedCount} sub={totalTx > 0 ? `${Math.round((fixedCount/Math.max(1,totalTx))*100)}% fix rate` : '—'} color="#00ff88" icon={I.bolt} />
+            <StatHUD label="USDC SETTLED" value={`$${totalSettled.toFixed(2)}`} sub="solana devnet" color="#7b61ff" icon={I.wallet} />
+            <StatHUD label="FEES EARNED" value={`$${totalFees.toFixed(2)}`} sub="2% per tx" color="#ccff00" icon={I.shield} />
           </div>
 
-          {/* Charts + Wallets Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            {/* Transaction Timeline */}
-            <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5">
-              <h3 className="text-white font-semibold text-sm mb-4">Transaction Timeline</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={timelineData}>
-                  <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorFixed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="time" stroke="#4a4d5a" fontSize={11} />
-                  <YAxis stroke="#4a4d5a" fontSize={11} />
-                  <Tooltip
-                    contentStyle={{ background: '#1a1d27', border: '1px solid #2a2d3a', borderRadius: '8px', fontSize: '12px' }}
-                    labelStyle={{ color: '#fff' }}
-                  />
-                  <Area type="monotone" dataKey="total" stroke="#6366f1" fill="url(#colorTotal)" name="Total" />
-                  <Area type="monotone" dataKey="fixed" stroke="#22c55e" fill="url(#colorFixed)" name="Fixed" />
-                </AreaChart>
-              </ResponsiveContainer>
+          {/* ====== WALLETS + LOG ====== */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {/* Wallets */}
+            <div className="space-y-2.5">
+              <h3 className="font-hud text-[9px] tracking-[0.2em] text-neon/40 mb-2 flex items-center gap-2">{I.wallet} WALLETS</h3>
+              <WalletHUD name="Treasury" bal={wallets.treasury} role="Master fund pool" color="#00f0ff" />
+              <WalletHUD name="Fixer Agent" bal={wallets.fixer} role="Purchase executor" color="#00ff88" />
+              <WalletHUD name="Escrow" bal={wallets.escrow} role="Fulfillment hold" color="#7b61ff" />
+              <WalletHUD name="Fee Collector" bal={wallets.fees} role="2% service fee" color="#ccff00" />
             </div>
 
-            {/* Fix Type Breakdown */}
-            <div className="bg-card border border-border rounded-xl p-5">
-              <h3 className="text-white font-semibold text-sm mb-4">Fix Type Breakdown</h3>
-              <ResponsiveContainer width="100%" height={160}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={4} dataKey="value">
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: '#1a1d27', border: '1px solid #2a2d3a', borderRadius: '8px', fontSize: '12px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap gap-3 mt-2 justify-center">
-                {pieData.map((entry, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-xs">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i] }}></span>
-                    <span className="text-gray-400">{entry.name.replace('_', ' ')}: {entry.value}</span>
-                  </div>
-                ))}
+            {/* Transaction log */}
+            <div className="lg:col-span-3 neon-border corner-brackets rounded-xl p-4 relative overflow-hidden">
+              <div className="data-stream absolute inset-0 pointer-events-none opacity-10" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-hud text-[10px] tracking-[0.2em] text-white flex items-center gap-2">{I.cpu} TRANSACTION LOG</h3>
+                  <span className="font-data text-[9px] text-neon/30">{transactions.length} records</span>
+                </div>
+                <div className="overflow-x-auto max-h-[340px] overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 z-10 bg-panel">
+                      <tr className="border-b border-neon/10">
+                        {['TIME', 'PRODUCT', 'FIX', 'AMOUNT', 'FEE', 'TX HASH', 'STATUS'].map(h => (
+                          <th key={h} className={`font-hud text-[8px] tracking-[0.15em] text-neon/30 py-2 px-2 ${h === 'AMOUNT' || h === 'FEE' ? 'text-right' : 'text-left'}`}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="py-16 text-center">
+                            <div className="font-hud text-[10px] tracking-[0.15em] text-neon/20 mb-2">NO DATA</div>
+                            <button onClick={() => { SFX.click(); setShowModal(true); }}
+                              className="font-hud text-[9px] tracking-[0.12em] text-neon/50 hover:text-neon transition-colors">
+                              INITIATE FIRST TRANSACTION
+                            </button>
+                          </td>
+                        </tr>
+                      ) : (
+                        [...transactions].reverse().slice(0, 50).map((tx, i) => (
+                          <tr key={tx.id || i} className="row-slide border-b border-white/[0.03] hover:bg-neon/[0.02] transition-colors">
+                            <td className="py-2 px-2 font-data text-[10px] text-neon/40 whitespace-nowrap">
+                              {tx.timestamp ? new Date(tx.timestamp).toLocaleTimeString('en-US', { hour12: false }) : '—'}
+                            </td>
+                            <td className="py-2 px-2 text-white text-[11px] max-w-[180px] truncate">{tx.product || '—'}</td>
+                            <td className="py-2 px-2"><FixBadge type={tx.fix_applied} /></td>
+                            <td className="py-2 px-2 text-right font-data text-[10px] text-white">${(parseFloat(tx.amount)||0).toFixed(2)}</td>
+                            <td className="py-2 px-2 text-right font-data text-[10px] text-white/30">${(parseFloat(tx.fee)||0).toFixed(2)}</td>
+                            <td className="py-2 px-2 font-data text-[9px] text-neon/20 max-w-[100px] truncate">{tx.tx_hash || '—'}</td>
+                            <td className="py-2 px-2"><StatusBadge status={tx.status} /></td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Wallets Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <WalletCard name="Treasury" balance={wallets.treasury} role="Master fund pool" />
-            <WalletCard name="Fixer Agent" balance={wallets.fixer} role="Purchase executor" />
-            <WalletCard name="Escrow" balance={wallets.escrow} role="Order fulfillment hold" />
-            <WalletCard name="Fee Collector" balance={wallets.fees} role="2% service fee" />
-          </div>
-
-          {/* Transaction Log */}
-          <div className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold text-sm">Transaction Log</h3>
-              <span className="text-gray-500 text-xs">{transactions.length} transactions</span>
+          {/* ====== FOOTER ====== */}
+          <footer className="text-center py-6 mt-6 border-t border-neon/5">
+            <div className="font-hud text-[8px] tracking-[0.3em] text-neon/15">
+              FINFIX // CROSSMINT // N8N // CLAUDE // SOLANA // USDC
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left text-gray-500 font-medium py-2 px-3 text-xs">Time</th>
-                    <th className="text-left text-gray-500 font-medium py-2 px-3 text-xs">Product</th>
-                    <th className="text-left text-gray-500 font-medium py-2 px-3 text-xs">Merchant</th>
-                    <th className="text-left text-gray-500 font-medium py-2 px-3 text-xs">Fix</th>
-                    <th className="text-right text-gray-500 font-medium py-2 px-3 text-xs">Amount</th>
-                    <th className="text-left text-gray-500 font-medium py-2 px-3 text-xs">Tx Hash</th>
-                    <th className="text-left text-gray-500 font-medium py-2 px-3 text-xs">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="py-12 text-center text-gray-500 text-sm">
-                        No transactions yet. Send a purchase request to the webhook to get started.
-                      </td>
-                    </tr>
-                  ) : (
-                    [...transactions].reverse().slice(0, 20).map((tx, i) => (
-                      <tr key={tx.id || i} className="border-b border-border/50 hover:bg-white/[0.02] transition-colors">
-                        <td className="py-2.5 px-3 text-gray-400 mono text-xs whitespace-nowrap">
-                          {new Date(tx.timestamp).toLocaleTimeString()}
-                        </td>
-                        <td className="py-2.5 px-3 text-white text-xs max-w-[200px] truncate">
-                          {tx.product}
-                        </td>
-                        <td className="py-2.5 px-3 text-gray-400 text-xs">
-                          {tx.merchant}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <FixTypeBadge type={tx.fix_applied} />
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-white mono text-xs">
-                          ${(tx.amount || 0).toFixed(2)}
-                        </td>
-                        <td className="py-2.5 px-3 text-gray-500 mono text-xs max-w-[120px] truncate">
-                          {tx.tx_hash || '\u2014'}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <StatusBadge status={tx.status} />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </footer>
 
-          {/* Footer */}
-          <div className="text-center text-gray-600 text-xs mt-8 pb-4">
-            FinFix &mdash; HAC Vibe Coding HACathon 2026 &mdash; Powered by Crossmint &amp; n8n
-          </div>
+          <PurchaseModal isOpen={showModal} onClose={() => setShowModal(false)} onSubmit={handlePurchase} loading={loading} />
         </div>
       );
     }

@@ -8,7 +8,16 @@
         "httpMethod": "POST",
         "path": "finfix/purchase",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
       },
       "id": "webhook-trigger",
       "name": "Purchase Request",
@@ -93,7 +102,7 @@
     },
     {
       "parameters": {
-        "model": "claude-sonnet-4-6",
+        "model": "claude-3-5-sonnet-20241022",
         "options": {
           "temperature": 0.1,
           "maxTokensToSample": 1024
@@ -130,9 +139,8 @@
     {
       "parameters": {
         "rules": {
-          "rules": [
+          "values": [
             {
-              "outputKey": "DIRECT_CHECKOUT",
               "conditions": {
                 "conditions": [
                   {
@@ -143,11 +151,13 @@
                       "operation": "equals"
                     }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DIRECT_CHECKOUT"
             },
             {
-              "outputKey": "DATA_BROKEN",
               "conditions": {
                 "conditions": [
                   {
@@ -158,11 +168,13 @@
                       "operation": "equals"
                     }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DATA_BROKEN"
             },
             {
-              "outputKey": "CHECKOUT_BLOCKED",
               "conditions": {
                 "conditions": [
                   {
@@ -173,11 +185,13 @@
                       "operation": "equals"
                     }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CHECKOUT_BLOCKED"
             },
             {
-              "outputKey": "PAYMENT_FAILED",
               "conditions": {
                 "conditions": [
                   {
@@ -188,11 +202,16 @@
                       "operation": "equals"
                     }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PAYMENT_FAILED"
             }
-          ],
-          "fallbackOutput": "UNKNOWN"
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
         }
       },
       "id": "route-failure",
@@ -206,34 +225,46 @@
     },
     {
       "parameters": {
-        "resource": "checkout",
-        "operation": "createOrder",
-        "platform": "amazon",
-        "productIdentifier": "={{ $json.product_url || $json.classification.product_url }}",
-        "recipientEmail": "={{ $json.user_email }}",
-        "recipientName": "FinFix Customer",
-        "addressLine1": "123 Demo St",
-        "city": "San Francisco",
-        "state": "CA",
-        "postalCode": "94105",
-        "country": "US",
-        "paymentMethod": "solana",
-        "paymentCurrency": "usdc"
+        "method": "POST",
+        "url": "https://www.crossmint.com/api/2025-06-09/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CROSSMINT_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "product",
+              "value": "={{ JSON.stringify({ platform: 'amazon', productLocator: $json.product_url || $json.classification?.product_url || '' }) }}"
+            },
+            {
+              "name": "payment",
+              "value": "={{ JSON.stringify({ method: 'solana', currency: 'usdc' }) }}"
+            },
+            {
+              "name": "recipient",
+              "value": "={{ JSON.stringify({ email: $json.user_email, name: 'FinFix Customer', address: { line1: '123 Demo St', city: 'San Francisco', state: 'CA', postalCode: '94105', country: 'US' } }) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "crossmint-create-order",
       "name": "Crossmint: Create Order",
-      "type": "n8n-nodes-crossmint.crossmintCheckout",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1360,
         100
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
@@ -277,7 +308,7 @@
     },
     {
       "parameters": {
-        "model": "claude-sonnet-4-6",
+        "model": "claude-3-5-sonnet-20241022",
         "options": {
           "temperature": 0,
           "maxTokensToSample": 2048
@@ -313,122 +344,179 @@
     },
     {
       "parameters": {
-        "resource": "checkout",
-        "operation": "createOrder",
-        "platform": "amazon",
-        "productIdentifier": "={{ $json.amazon_search }}",
-        "recipientEmail": "={{ $json.user_email }}",
-        "recipientName": "FinFix Customer",
-        "addressLine1": "123 Demo St",
-        "city": "San Francisco",
-        "state": "CA",
-        "postalCode": "94105",
-        "country": "US",
-        "paymentMethod": "solana",
-        "paymentCurrency": "usdc"
+        "method": "POST",
+        "url": "https://www.crossmint.com/api/2025-06-09/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CROSSMINT_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "product",
+              "value": "={{ JSON.stringify({ platform: 'amazon', productLocator: $json.amazon_search || '' }) }}"
+            },
+            {
+              "name": "payment",
+              "value": "={{ JSON.stringify({ method: 'solana', currency: 'usdc' }) }}"
+            },
+            {
+              "name": "recipient",
+              "value": "={{ JSON.stringify({ email: $json.user_email, name: 'FinFix Customer', address: { line1: '123 Demo St', city: 'San Francisco', state: 'CA', postalCode: '94105', country: 'US' } }) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "crossmint-create-order-fixed",
       "name": "Crossmint: Create Order (Fixed)",
-      "type": "n8n-nodes-crossmint.crossmintCheckout",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         2020,
         300
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "checkout",
-        "operation": "createOrder",
-        "platform": "amazon",
-        "productIdentifier": "={{ $json.product_url }}",
-        "recipientEmail": "={{ $json.user_email }}",
-        "recipientName": "FinFix Customer",
-        "addressLine1": "123 Demo St",
-        "city": "San Francisco",
-        "state": "CA",
-        "postalCode": "94105",
-        "country": "US",
-        "paymentMethod": "solana",
-        "paymentCurrency": "usdc"
+        "method": "POST",
+        "url": "https://www.crossmint.com/api/2025-06-09/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CROSSMINT_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "product",
+              "value": "={{ JSON.stringify({ platform: 'amazon', productLocator: $json.product_url || '' }) }}"
+            },
+            {
+              "name": "payment",
+              "value": "={{ JSON.stringify({ method: 'solana', currency: 'usdc' }) }}"
+            },
+            {
+              "name": "recipient",
+              "value": "={{ JSON.stringify({ email: $json.user_email, name: 'FinFix Customer', address: { line1: '123 Demo St', city: 'San Francisco', state: 'CA', postalCode: '94105', country: 'US' } }) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "crossmint-checkout-reroute",
       "name": "Crossmint: Reroute to World Store",
-      "type": "n8n-nodes-crossmint.crossmintCheckout",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1360,
         500
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "createTransfer",
-        "blockchainType": "solana",
-        "originWallet": "email:fixer@finfix.demo",
-        "recipientWallet": "email:escrow@finfix.demo",
-        "tokenChain": "solana-devnet",
-        "tokenName": "usdc",
-        "amount": "={{ $json.total || $json.price || '0' }}"
+        "method": "POST",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:fixer@finfix.demo:solana/transfers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CROSSMINT_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "recipient",
+              "value": "email:escrow@finfix.demo:solana"
+            },
+            {
+              "name": "currency",
+              "value": "usdc"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.total || $json.price || '0' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "crossmint-transfer-escrow",
       "name": "Crossmint: Transfer to Escrow",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         2280,
         300
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "createTransfer",
-        "blockchainType": "solana",
-        "originWallet": "email:escrow@finfix.demo",
-        "recipientWallet": "email:fees@finfix.demo",
-        "tokenChain": "solana-devnet",
-        "tokenName": "usdc",
-        "amount": "={{ $json.fee || '0' }}"
+        "method": "POST",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:escrow@finfix.demo:solana/transfers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CROSSMINT_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "recipient",
+              "value": "email:fees@finfix.demo:solana"
+            },
+            {
+              "name": "currency",
+              "value": "usdc"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.fee || '0' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "crossmint-collect-fee",
       "name": "Crossmint: Collect Fee",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         2500,
         300
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({\n  status: 'success',\n  message: 'FinFix completed transaction',\n  transaction: {\n    product: $json.product?.product_name || 'Product',\n    amount_usdc: $json.total || $json.price || 0,\n    fee_usdc: $json.fee || 0,\n    fix_applied: $json.fix_type || 'DIRECT_CHECKOUT',\n    fix_details: $json.fix_details || 'No fix needed',\n    tx_hash: $json.txHash || $json.transactionId || 'pending',\n    timestamp: new Date().toISOString()\n  }\n}) }}",
+        "respondWith": "allIncomingItems",
         "options": {}
       },
       "id": "respond-success",
@@ -442,11 +530,8 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({\n  status: 'escalated',\n  message: 'Transaction requires human review',\n  failure_type: $json.failure_type || 'UNKNOWN',\n  details: $json.classification?.details || 'Could not auto-fix this transaction'\n}) }}",
-        "options": {
-          "responseCode": 202
-        }
+        "respondWith": "allIncomingItems",
+        "options": {}
       },
       "id": "respond-escalated",
       "name": "Respond Escalated",
@@ -459,7 +544,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Payment fix: check fixer wallet balance and handle payment rerouting\nconst data = $input.first().json;\n\nreturn [{\n  json: {\n    ...data,\n    fix_type: 'PAYMENT_FIX',\n    fix_details: 'Rerouted payment through USDC stablecoin rails via Crossmint',\n    payment_method: 'usdc',\n    payment_chain: 'solana-devnet'\n  }\n}];"
+        "jsCode": "// Payment fix: check fixer wallet balance and handle payment rerouting\nconst data = $input.first().json;\n\nreturn [{\n  json: {\n    ...data,\n    fix_type: 'PAYMENT_FIX',\n    fix_details: 'Rerouted payment through USDC stablecoin rails via Crossmint',\n    payment_method: 'usdc',\n    payment_chain: 'solana'\n  }\n}];"
       },
       "id": "payment-fix",
       "name": "Payment Fix: USDC Reroute",

@@ -25,75 +25,66 @@
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:treasury@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:treasury@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "balance-treasury",
       "name": "Crossmint: Treasury Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         140
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:fixer@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:fixer@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "balance-fixer",
       "name": "Crossmint: Fixer Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         300
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "getBalance",
-        "wallet": "email:escrow@finfix.demo",
-        "chainType": "solana",
-        "chains": "solana-devnet",
-        "tokens": "usdc"
+        "method": "GET",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:escrow@finfix.demo:solana/balances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "options": { "timeout": 10000 }
       },
       "id": "balance-escrow",
       "name": "Crossmint: Escrow Balance",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         460
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
@@ -130,29 +121,32 @@
     },
     {
       "parameters": {
-        "resource": "wallet",
-        "operation": "createTransfer",
-        "blockchainType": "solana",
-        "originWallet": "email:treasury@finfix.demo",
-        "recipientWallet": "email:fixer@finfix.demo",
-        "tokenChain": "solana-devnet",
-        "tokenName": "usdc",
-        "amount": "50"
+        "method": "POST",
+        "url": "https://www.crossmint.com/api/2025-06-09/wallets/email:treasury@finfix.demo:solana/transfers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.CROSSMINT_API_KEY || '' }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "recipient", "value": "email:fixer@finfix.demo:solana" },
+            { "name": "currency", "value": "usdc" },
+            { "name": "amount", "value": "50" }
+          ]
+        },
+        "options": { "timeout": 30000 }
       },
       "id": "topup-fixer",
       "name": "Crossmint: Top-up Fixer ($50)",
-      "type": "n8n-nodes-crossmint.crossmintWallets",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1200,
         100
-      ],
-      "credentials": {
-        "crossmintApi": {
-          "id": "2",
-          "name": "Crossmint FinFix"
-        }
-      }
+      ]
     },
     {
       "parameters": {
@@ -171,6 +165,19 @@
       "typeVersion": 2,
       "position": [
         960,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log escrow warning — Slack integration can be added later\nconst data = $input.first().json;\nconsole.log('WARNING: Escrow balance exceeds $100 — currently $' + data.escrow_balance);\nreturn [{\n  json: {\n    warning: 'Escrow balance high',\n    escrow_balance: data.escrow_balance,\n    checked_at: data.checked_at\n  }\n}];"
+      },
+      "id": "log-escrow-warning",
+      "name": "Log Escrow Warning",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
         440
       ]
     }
@@ -267,7 +274,7 @@
       "main": [
         [
           {
-            "node": "Slack: Escrow Warning",
+            "node": "Log Escrow Warning",
             "type": "main",
             "index": 0
           }
